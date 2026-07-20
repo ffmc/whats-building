@@ -14,46 +14,56 @@ flowchart TD
         SEARCH["GitHub Search API<br/>created:… stars:&gt;=50"] -->|discover ~262k| DIM[("dim_repo<br/>id, node_id*, name,<br/>desc, lang, topics")]
         DIM -->|node_id| GQL["GitHub GraphQL<br/>nodes by node_id"]
         GQL -->|snapshot| ANCHOR[["fact_repo_metrics<br/>ANCHOR rows"]]
-        DIM --> BATCH["Anthropic Batch API<br/>Haiku 4.5, 15-20/call,<br/>cached prompt (~$26-40)"]
+        DIM --> BATCH["Anthropic Batch API<br/>Haiku 4.5, 20/call batched<br/>(~$35-45; no caching)"]
         BATCH -->|classify| CLASS[("fact_repo_classification<br/>category, domain, is_ai")]
     end
 
-    subgraph DAILY["Daily job (cron)"]
-        D1["1. Search API<br/>find new repos"] -->|INSERT| DIM
-        D2["2. GraphQL batched<br/>by node_id (~2hr, $0)"] -->|INSERT today| METR[("fact_repo_metrics")]
-        D3["3. Retention<br/>delete daily &gt;90d;<br/>keep monthly + anchor"]
-        D4["4. classify.py (API)<br/>new/changed only,<br/>description_hash dedup"] -->|INSERT| CLASS
+    subgraph DAILY["Daily job (GitHub Actions cron)"]
+        D1["1. Search API<br/>find new repos (recent window)"] -->|INSERT| DIM
+        D4["2. classify.py (API)<br/>new/changed only,<br/>description_hash dedup"] -->|INSERT| CLASS
+        D5["3. aggregate.py → JSON → deploy"]
+    end
+
+    subgraph WEEKLY["Weekly job (GitHub Actions cron)"]
+        D2["GraphQL batched<br/>by node_id (~2hr, $0)"] -->|INSERT| METR[("fact_repo_metrics")]
+        D3["Retention<br/>delete weekly &gt;90d;<br/>keep monthly + anchor"]
     end
 
     subgraph STORE["Metrics storage (3 tiers)"]
         T1["ANCHOR — 1/repo — forever (~26MB)"]
-        T2["DAILY — 1/day — 90d rolling (~2.4GB const)"]
+        T2["WEEKLY — 1/wk — 90d rolling (~340MB const)"]
         T3["MONTHLY — 1/month — forever (~314MB/yr)"]
     end
 
     FOUND --> DAILY
+    FOUND --> WEEKLY
     METR --> STORE
     ANCHOR --> STORE
-    STORE --> SQLITE["SQLite (local, dev)"]
-    SQLITE -->|migrate when proven| SUPA["Supabase Pro (~$25/mo)"]
-    SUPA --> VIZ["Web page (viz)"]
+    STORE --> SQLITE["SQLite<br/>(local dev → R2/Turso in prod)"]
+    SQLITE --> AGG["aggregate.py<br/>ONLY DB consumer"]
+    AGG -->|static JSON ~2MB| JSON[/"summary.json, trends.json,<br/>top/&lt;category&gt;.json"/]
+    JSON --> VIZ["Static site<br/>(Cloudflare Pages, $0)"]
 
     GHA["GH Archive — DROPPED<br/>noisy historical metrics,<br/>not worth a 10-TB scan"]:::dropped
     classDef dropped stroke-dasharray: 5 5,opacity:0.6
 ```
 
-`*` `node_id` = column to add to `dim_repo` (GraphQL global ID; rename-proof).
+`*` `node_id` = GraphQL global ID (rename-proof); Search API returns it directly.
 
 ## Data model
 
-SQLite locally (`whats_building.db`) during development; migrate to Supabase
-(Postgres) once the pipeline is proven. Schema is kept Postgres-compatible.
+Full DDL in `schema.sql`. SQLite locally (`whats_building.db`) during development;
+migrate to Supabase (Postgres) once the pipeline is proven. Schema is kept
+Postgres-compatible.
 
-- `dim_repo` — one row per repo (identity + static-ish metadata). **Needs a
-  `node_id` column added** (GitHub GraphQL global ID) for rename/redirect-proof
-  metric refreshes.
-- `fact_repo_metrics` — append-only time-series, keyed `(repo_id, snapshot_date)`.
-  Holds stars/forks/watchers snapshots. See retention design below.
+- `dim_repo` — one row per repo (identity + slow-changing metadata): `node_id`
+  (GraphQL global ID, rename-proof), `owner`/`owner_type` (User vs Org), name,
+  description, homepage, language, license, `is_fork`, `is_template`,
+  `default_branch`, `size_kb`, `created_at`, `pushed_at` + `archived` (refreshed
+  daily), `first_seen_at`.
+- `fact_repo_metrics` — append-only time-series, keyed `(repo_id, snapshot_date)`,
+  with a `tier` column (`anchor`/`daily`/`monthly`) driving retention. Holds
+  stars/forks/watchers/open-issues snapshots. See retention design below.
 - `fact_repo_classification` — one row per repo (category, domain,
   is_ai_built_or_related, confidence), deduped on `description_hash`.
 - `dim_topic` / `bridge_repo_topic` — GitHub topic tags (sparse, ~52% untagged).
@@ -117,69 +127,145 @@ long-run arc:
 
 - **Anchor** — the foundation-day snapshot, 1 row/repo, **never deleted**.
   Guarantees "evolution since day one" regardless of what rolls off.
-- **Daily** — one row/repo/day, kept **90 days rolling** (delete older). Constant
-  ~24M rows ≈ 2.4 GB at 262k repos; does not accumulate.
+- **Weekly** — one row/repo/week, kept **90 days rolling** (delete older).
+  Constant ~3.4M rows ≈ 340 MB at 262k repos; does not accumulate.
 - **Monthly** — one row/repo/month, kept **forever**. Grows ~314 MB/year.
 
-Trajectory: ~2.4 GB now, +~314 MB/yr → 8 GB (Supabase Pro cap) in ~10–15 years
-accounting for repo-set growth. Downsample monthly → quarterly after ~2 years if
-ever needed. All append-only; never overwrite a prior snapshot.
+**Weekly, not daily** (decided): daily per-repo granularity is over-collection for
+a dashboard of multi-year trends — no chart in scope renders differently — while
+costing ~7× the storage (2.4 GB vs 340 MB). That difference is what puts the whole
+dataset inside free tiers. It also cuts the expensive ~2 h GraphQL run from 30×
+to ~4× per month.
+
+Trajectory: ~340 MB now, +~314 MB/yr → comfortably inside R2's 10 GB free tier for
+~20+ years. Downsample monthly → quarterly if ever needed. All append-only; never
+overwrite a prior snapshot.
 
 ## Classification
 
-- **Bulk (one-time):** Anthropic **Batch API**, Haiku 4.5, **batched** — three
-  optimizations stack to keep all 262k repos cheap:
-  1. **Request batching** — 15–20 repos per call so the ~1,500-token system
-     prompt is amortized instead of re-paid per repo (the dominant cost). Echo
-     repo IDs in the output to keep rows aligned.
-  2. **Prompt caching** — mark the system prompt cached (0.1× on reads).
-  3. **Batch API** — 50% off.
+- **Bulk (one-time):** Anthropic **Batch API**, Haiku 4.5, **batched**
+  (`classify.py --batch`). Two levers keep all 262k repos cheap:
+  1. **Request batching** — 20 repos per call (`classify_repos` tool returns an
+     array, each row echoing its `repo_id`) so the ~1,500-token system prompt is
+     amortized ~20× instead of re-paid per repo. This is the dominant saving.
+  2. **Batch API** — 50% off.
 
-  Result: ~$0.0001–0.00015/repo → **~$26–40 one-time** for the full 262k, at full
-  Haiku quality (vs ~$210 for the naive 1-repo-per-call path). Requires reworking
-  `classify.py` from its current 1-repo/call form.
+  **Prompt caching does NOT apply:** Haiku 4.5's minimum cacheable prefix is 4,096
+  tokens; the system prompt is ~1,500, below the floor, so it silently won't cache
+  (`cache_creation_input_tokens: 0`). Batching is therefore the only prompt-cost
+  lever. Realistic cost **~$35–45 one-time** for the full 262k (vs ~$210 naive
+  1-repo/call). Output tokens dominate at this batch size.
 
   Rejected alternatives: subscription/`claude -p` (weeks of babysitting ~420M
-  tokens to save ~$30); local Ollama is the **$0 fallback** but this box has no
+  tokens to save ~$40); local Ollama is the **$0 fallback** but this box has no
   discrete GPU (Iris Xe only), so CPU inference means days–weeks of compute at
   lower quality.
-- **Daily (incremental):** `classify.py` via the regular API for newly discovered
-  repos only. Skips unchanged descriptions via `description_hash`; re-classifies
-  only on description change. Cents/day.
+- **Daily (incremental):** `classify.py` (no `--batch`) — synchronous, regular
+  API, for newly discovered repos only. Skips unchanged descriptions via
+  `description_hash`; re-classifies only on description change. Cents/day.
 
-## Daily job
+## Scheduled jobs
 
-1. **Discover** new repos crossing the filter (Search API) → insert into `dim_repo`.
-2. **Refresh metrics** for all tracked repos (batched GraphQL by `node_id`) →
-   insert today's `fact_repo_metrics` rows. Mark deleted repos (null node) as gone.
-3. **Retention** — delete daily rows older than 90 days; on the 1st, keep a
-   monthly marker.
-4. **Classify** new/changed repos (regular API).
+**Daily** (cheap, minutes):
 
-Cadence: **daily**. Rate/cost: $0 GitHub (rate-limited), cents Anthropic.
+1. **Discover** new repos crossing the filter (Search API, recent date window
+   only — not a full re-crawl) → insert into `dim_repo`.
+2. **Classify** new/changed repos (`classify.py`, regular API). Cents/day.
+3. **Aggregate** → `site/data/*.json` → deploy the static site.
 
-Caveat: `whats_building.db` is currently a tracked binary in git — a daily job
+**Weekly** (the expensive one, ~2 h):
+
+4. **Refresh metrics** for all tracked repos (batched GraphQL by `node_id`) →
+   insert this week's `fact_repo_metrics` rows at `tier=weekly`. Mark deleted
+   repos (null node) as gone.
+5. **Retention** — delete `weekly` rows older than 90 days; on the 1st of the
+   month, write a `monthly` row instead. Never touch `anchor`.
+
+Rate/cost: $0 GitHub (rate-limited), cents Anthropic.
+
+Caveat: `whats_building.db` is currently a tracked binary in git — a scheduled job
 rewriting it bloats history. Gitignore it (treat as regenerable state) before
-automating, or move state to Supabase.
+automating; production state lives in R2.
+
+## Website / publishing
+
+The site is **static JSON only — it never queries a database.** `aggregate.py`
+(step 5 of the daily job) is the sole DB consumer; it collapses 262k repos and
+millions of metric rows into a few thousand numbers:
+
+| File | Contents | Size |
+|---|---|---|
+| `summary.json` | category/domain/language counts, created-by-month, pre/post-boom split | ~50 KB |
+| `trends.json` | star + watcher totals per category per snapshot date | ~200 KB |
+| `top/<category>.json` | top 100 repos per category, full detail | ~170 KB each, lazy-loaded |
+
+Written with `ensure_ascii=False` — many descriptions are non-Latin, and ASCII
+escaping nearly doubled file size (297 KB → 173 KB per top list).
+
+Consequences worth keeping:
+
+- Hosting is **$0** (Cloudflare Pages / Netlify / GitHub Pages) with no backend
+  and no DB in the request path. Visitors download a few hundred KB.
+- Swapping the pipeline's store is a **one-file change** (`aggregate.py`), because
+  nothing else reads the DB.
+- Curated-dashboard + top-100 exploration is fully served by static files.
+  Arbitrary free-text search across all 262k repos is **not** — that would need a
+  live query backend, and is deliberately out of scope.
+
+## Deployment (production)
+
+Local SQLite + cron is the **development** setup only. Production must run
+unattended. Two constraints shaped the choice:
+
+1. **Supabase alone does not solve this.** It is storage, not compute. The
+   metrics job is a ~2-hour Python process (262k repos over GraphQL), far beyond
+   Edge Function timeouts. Compute is needed regardless of where the DB lives.
+2. **Metrics resolution is the entire cost driver** — at daily cadence, 262k ×
+   90 days ≈ 23.6M rows ≈ 2.4 GB. Anchor (26 MB) and monthly (314 MB/yr) are
+   trivial. Weekly cuts it to ~340 MB.
+
+**Decided: GitHub Actions + Cloudflare R2, at $0.** Weekly resolution keeps the
+DB ~340 MB, well inside R2's 10 GB free tier with no egress fees. Rejected:
+Hetzner CX22 (~€4/mo), Fly.io (~$5/mo), Turso/Cloudflare D1 (hosted SQLite — the
+existing `schema.sql` would port unchanged, but they still need external compute),
+Supabase Pro ($25/mo, buying Postgres features this workload never uses).
+
+Shape of it:
+
+- **Workflows** — a daily job (discover → classify → aggregate → deploy) and a
+  weekly job (full metrics snapshot + retention). The ~2 h snapshot fits well
+  inside Actions' 6 h per-job limit.
+- **State** — the SQLite file lives in R2; each run pulls it, mutates it, pushes
+  it back. At ~340 MB that transfer is quick and R2 egress is free.
+- **Minutes** — Actions is unlimited on public repos; on a private repo the
+  weekly 2 h run plus short daily runs lands near ~500 of the 2,000 free min/mo.
+- **Secrets** — `GITHUB_TOKEN` (a PAT — the Actions-provided token doesn't carry
+  the Search/GraphQL rate limit we need), `ANTHROPIC_API_KEY`, R2 credentials.
+- **Concurrency** — daily and weekly jobs both write the DB and must not overlap.
+  Put them in a shared Actions `concurrency` group; a mid-run push from an
+  overlapping job would silently lose writes.
 
 ## Cost summary
 
 - GH Archive / BigQuery: **$0** (not used).
 - GitHub API (discovery + daily metrics): **$0** (rate-limited only).
-- Bulk classification: **~$26–40 one-time** (batched + cached Batch API).
+- Bulk classification: **~$35–45 one-time** (batched Batch API; no caching on Haiku).
 - Daily classification: **cents/day**.
-- Hosting: local SQLite **$0** during dev; Supabase Pro **~$25/mo** once migrated
-  (free tier's 500 MB can't hold the daily tier).
+- Site hosting: **$0** (static JSON, no backend).
+- Pipeline hosting: **$0** during dev (local); **$0–5/mo** in production
+  (GitHub Actions + R2, or a ~€4 VPS). Supabase Pro's $25 is not required.
 
 ## Status / where we left off
 
 - [x] Pilot: 100 repos pulled (GitHub API), classified, one metrics snapshot.
 - [x] Architecture designed and locked (this doc).
-- [ ] Add `node_id` column to `dim_repo`.
-- [ ] Discovery script: Search API → full 262k `dim_repo` (created ≥2021-07-19, stars ≥50).
-- [ ] Foundation metrics snapshot via GraphQL (writes anchor rows).
-- [ ] Rework `classify.py` to batched + cached Batch API; bulk-classify 262k (~$26–40).
-- [ ] Daily job: GraphQL metrics refresh + retention + new-repo discovery + classify.
-- [ ] Gitignore `whats_building.db` before automating the daily job.
-- [ ] Web page (viz).
-- [ ] Migrate SQLite → Supabase when pipeline is proven.
+- [x] Schema finalized (`schema.sql`) and DB recreated with full field set (incl. `node_id`, `tier`).
+- [x] Discovery script: Search API → **262,715 repos** in `dim_repo` (created 2021-07-19..2026-07-20, stars ≥50, `fork:false`). `discover.py` retries 5xx *and* connection-drop exceptions — both killed earlier runs mid-crawl.
+- [~] Foundation metrics snapshot: `snapshot.py` built + validated (real watchers ≠ stars confirmed); full anchor run pending.
+- [x] Rework `classify.py` to batched Batch API (`--batch`); sync mode for daily. Pending: full bulk run (~$35–45).
+- [x] Decided: **weekly** metrics resolution, **GitHub Actions + Cloudflare R2** ($0) for production.
+- [ ] Daily job (discover + classify + aggregate) and weekly job (metrics + retention).
+- [x] Gitignored `whats_building.db` (+ logs, `__pycache__`, `site/data/`) and untracked it. History was never bloated — the committed blob was the 0.1 MB pilot DB, so no rewrite needed.
+- [~] `aggregate.py` stubbed (DB → static JSON). Runs; output is thin until classification lands.
+- [ ] Web page (viz) — static site consuming `site/data/*.json`.
+- [ ] Actions workflows + R2 state push/pull; secrets (PAT, Anthropic key, R2 creds).
