@@ -2,6 +2,7 @@
 
 # Regenerable pipeline state — lives in R2 in production
 whats_building.db
+whats_building.db-*
 *.log
 __pycache__/
 site/data/
