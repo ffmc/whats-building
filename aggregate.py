@@ -31,6 +31,16 @@ def latest_metrics(con):
     }
 
 
+def taxonomy(con):
+    """The category/domain definitions for the site legend and tooltips."""
+    out = {"category": {}, "domain": {}}
+    for axis, slug, label, desc, grp in con.execute(
+        "SELECT axis, slug, label, description, grp FROM dim_taxonomy ORDER BY axis, sort_order"
+    ):
+        out[axis][slug] = {"label": label, "description": desc, "group": grp}
+    return out
+
+
 def summary(con):
     by_cat = dict(con.execute("""
         SELECT COALESCE(c.category, 'unclassified'), COUNT(*)
@@ -61,9 +71,17 @@ def summary(con):
         FROM dim_repo r JOIN fact_repo_classification c USING (repo_id)
         GROUP BY 1
     """, (BOOM_DATE,)))
+    confidence = dict(con.execute("""
+        SELECT CASE WHEN CAST(confidence AS REAL) >= 0.8 THEN 'high'
+                    WHEN CAST(confidence AS REAL) >= 0.6 THEN 'medium'
+                    ELSE 'low' END,
+               COUNT(*)
+        FROM fact_repo_classification GROUP BY 1
+    """))
     return {
         "total_repos": con.execute("SELECT COUNT(*) FROM dim_repo").fetchone()[0],
         "boom_date": BOOM_DATE,
+        "confidence": confidence,
         "by_category": by_cat,
         "by_domain": by_domain,
         "created_by_month": by_month,
@@ -90,17 +108,19 @@ def trends(con):
 def top_lists(con, metrics):
     rows = con.execute("""
         SELECT r.repo_id, r.full_name, r.description, r.language, r.created_at,
-               COALESCE(c.category, 'unclassified'), COALESCE(c.domain, 'unclassified')
+               COALESCE(c.category, 'unclassified'), COALESCE(c.domain, 'unclassified'),
+               c.confidence
         FROM dim_repo r LEFT JOIN fact_repo_classification c USING (repo_id)
     """).fetchall()
     by_cat = defaultdict(list)
-    for rid, full_name, desc, lang, created, cat, domain in rows:
+    for rid, full_name, desc, lang, created, cat, domain, conf in rows:
         m = metrics.get(rid)
         if not m:
             continue
         entry = {"repo_id": rid, "full_name": full_name, "description": desc,
                  "language": lang, "created_at": created, "category": cat,
-                 "domain": domain, "url": f"https://github.com/{full_name}", **m}
+                 "domain": domain, "confidence": conf,
+                 "url": f"https://github.com/{full_name}", **m}
         by_cat[cat].append(entry)
         by_cat["all"].append(entry)
     return {cat: sorted(v, key=lambda e: e["stars"], reverse=True)[:TOP_N]
@@ -121,6 +141,7 @@ def main():
 
     con = sqlite3.connect(DB_PATH)
     metrics = latest_metrics(con)
+    dump(os.path.join(args.out, "taxonomy.json"), taxonomy(con))
     dump(os.path.join(args.out, "summary.json"), summary(con))
     dump(os.path.join(args.out, "trends.json"), trends(con))
     for cat, entries in top_lists(con, metrics).items():

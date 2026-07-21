@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sqlite3 *)",
+      "Bash(nohup python3 -u discover.py > discover.log 2>&1 &\necho \"started PID $!\")"
+    ]
+  }
+}

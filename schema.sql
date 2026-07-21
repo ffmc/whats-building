@@ -47,6 +47,18 @@ CREATE TABLE fact_repo_metrics (
 -- Retention: delete WHERE tier='weekly' AND snapshot_date older than 90d; never touch anchor/monthly.
 CREATE INDEX idx_metrics_tier_date ON fact_repo_metrics (tier, snapshot_date);
 
+-- Taxonomy definitions — single source of truth for both the classifier prompt
+-- and the website legend/tooltips. One row per (axis, slug). Seed: seed_taxonomy.sql.
+CREATE TABLE dim_taxonomy (
+    axis        TEXT,   -- category | domain
+    slug        TEXT,   -- the value stored in fact_repo_classification
+    label       TEXT,   -- human title for the UI
+    description TEXT,    -- definition (also fed verbatim into the classifier prompt)
+    grp         TEXT,   -- UI grouping (domains: ai|technical|product|escape)
+    sort_order  INTEGER,
+    PRIMARY KEY (axis, slug)
+);
+
 -- One row per repo (not time-series). Re-classify only if description_hash changed.
 CREATE TABLE fact_repo_classification (
     repo_id                INTEGER PRIMARY KEY REFERENCES dim_repo(repo_id),

@@ -8,12 +8,13 @@ prompt caching does not apply — batching is the cost lever). Two modes:
   python3 classify.py            synchronous (daily incremental, small N)
   python3 classify.py --batch    Message Batches API, 50% off (one-time bulk)
 
-Reads ANTHROPIC_API_KEY from env or .env.
+Reads ANTHROPIC_TOKEN from env or .env.
 """
 import argparse
 import hashlib
 import json
 import os
+import random
 import sqlite3
 import sys
 import time
@@ -28,100 +29,100 @@ BATCH_SIZE = 20
 # Haiku 4.5 pricing per Mtok. Batch API halves both. Verify before trusting totals.
 PRICE_IN, PRICE_OUT = 1.00, 5.00
 
-CATEGORIES = ["ai-meta-tooling", "ai-application", "dev-tooling", "web-app",
-              "mobile-app", "desktop-app", "data-infra", "game", "other"]
-DOMAINS = ["fintech", "productivity", "note-taking-pkm", "health-fitness",
-           "education", "e-commerce", "social-communication", "gaming-entertainment",
-           "security", "data-analytics", "content-media", "dev-tooling-general",
-           "ai-agent-ecosystem", "infra-ops", "docs-reference", "other"]
+# The taxonomy lives in dim_taxonomy (single source of truth). CATEGORIES,
+# DOMAINS and the two bullet blocks below are loaded from the DB at runtime by
+# load_taxonomy(); nothing here is hardcoded.
+CATEGORIES, DOMAINS = [], []
 
-SYSTEM_PROMPT = """You classify GitHub repositories based on their name and description.
+PROMPT_TEMPLATE = """You classify GitHub repositories from their name and description.
 
-For each repo, output:
-- category: the single best-fit technical category for what the repo IS or DOES
-- domain: the single best-fit product/business vertical the repo serves
-- is_ai_built_or_related: whether the repo is itself an AI/LLM tool, or is fundamentally about AI/LLM functionality
-- confidence: your confidence in this classification, 0.0-1.0
+Two independent axes; never answer both with the same idea:
+- category = what FORM the repo takes (its shape as software)
+- domain   = what SUBJECT the repo is about (its field)
+Pick exactly one value for each from the lists below.
 
-category and domain are independent axes — a repo can be category=web-app and
-domain=fintech at the same time. Pick exactly one value for each from the lists below.
+An MCP server library is category=library-sdk, domain=ai-agents-mcp. A curated
+list of fintech APIs is category=docs-reference, domain=fintech.
 
-Categories (technical shape of the repo):
-- ai-meta-tooling: tools FOR building/running AI systems (agent frameworks, MCP servers, LLM IDEs, prompt tooling, agent skills)
-- ai-application: a product or app that uses AI/LLMs as a feature, but isn't itself AI infrastructure
-- dev-tooling: developer tools, CLIs, libraries, frameworks not centered on AI
-- web-app: web applications or services
-- mobile-app: mobile applications
-- desktop-app: desktop/native applications
-- data-infra: databases, pipelines, data engineering
-- game: games or game engines
-- other: doesn't fit above, or insufficient information
+Categories (the FORM the repo takes — never the subject matter):
+{categories}
 
-Domains (product/business vertical the repo serves). For developer-facing repos,
-distinguish dev-tooling-general / ai-agent-ecosystem / infra-ops by what phase of
-building software the end-user is in — writing code, building an AI agent, or
-operating a live system — not by the repo's own technical shape (that's category):
-- fintech: money, payments, banking, budgeting, invoicing, trading
-- productivity: task/project management, workflow automation
-- note-taking-pkm: notes, personal knowledge management, wikis
-- health-fitness: health tracking, fitness, medical
-- education: learning, teaching, courses
-- e-commerce: online retail, marketplaces, storefronts
-- social-communication: chat, social networks, messaging
-- gaming-entertainment: games, media consumption, entertainment
-- security: security tooling, auth, pentesting, privacy
-- data-analytics: data pipelines, BI, analytics, visualization
-- content-media: content creation, publishing, media editing
-- dev-tooling-general: helps someone write, test, or ship application code (linters, CLIs, testing libraries, build tools, general-purpose frameworks)
-- ai-agent-ecosystem: helps someone build or operate an AI/LLM agent specifically (agent skills, MCP servers, agent orchestration/frameworks, prompt tooling)
-- infra-ops: helps someone deploy, monitor, or run systems already in production (Kubernetes, SRE, cloud infra, CI/CD, observability)
-- docs-reference: curated lists, awesome-lists, guides, tutorials, documentation repos with no runnable product
-- other: doesn't fit above, or insufficient information
+Domains (the SUBJECT the repo is about — never its form). Always choose the most
+specific applicable field. Do not fall back to a broad value because the repo is
+developer-facing; developer tools still have a subject (a Kotlin logging library
+is observability, a shading language is graphics-3d):
+{domains}
 
 Rules for ambiguous cases:
-- A repo ABOUT the AI tooling ecosystem (e.g. "a collection of MCP servers", "agent orchestration framework") is ai-meta-tooling AND is_ai_built_or_related=true — do not undercount these just because they aren't themselves an LLM wrapper.
-- A repo that merely mentions "GPT" or "AI" once, in a non-central way (e.g. a non-English description where AI is incidental, not the point), should NOT be flagged is_ai_built_or_related=true. Judge centrality, not keyword presence.
-- If description is missing or empty, use only the repo name and any topics provided. Lower confidence accordingly — do not guess category with high confidence from a name alone unless it's unambiguous (e.g. "gpt-pdf-chat").
+- unknown vs other: use `unknown` ONLY when there is too little information to judge (missing/empty/vague description and an uninformative name). Use `other` when you understand the repo perfectly well but no listed value fits. These are different failures — do not substitute one for the other.
+- Prefer a specific value over an escape value. Only use unknown/other after genuinely considering every listed option.
+- Classify by what the repo itself PROVIDES, not the host it plugs into or the framework it targets. A visual theme/skin is domain=ui-frontend even if it themes a DevOps dashboard or a game. A helper inside a web framework takes its FUNCTIONAL domain (getting a client IP is networking; rate limiting or CORS is security/networking; an ORM binding is data-analytics) — "targets a web framework" is not by itself ui-frontend. ui-frontend is only for repos whose subject IS the visual/UI layer.
+- is_ai_built_or_related: set true whenever the repo itself provides or depends on AI/LLM functionality (including a fintech app whose core feature is an LLM); it is NOT the same as having an AI domain, and a curated list counts only if it is itself about AI. Leave it false for an AI-adjacent repo with no AI, or one that merely mentions "GPT"/"AI" in passing — judge centrality, not keyword presence.
+- If description is missing or empty, use only the repo name and any topics provided. Lower confidence accordingly, and prefer `unknown` over a high-confidence guess.
 - Non-English descriptions: translate mentally and classify on meaning, not surface tokens.
 
-You will receive a numbered list of repos. Return one classification per repo,
-echoing its repo_id exactly. Output strictly via the provided tool. No free text."""
+Return one classification per repo, echoing its repo_id exactly. confidence is 0.0-1.0."""
 
-TOOL = {
-    "name": "classify_repos",
-    "description": "Classify a batch of GitHub repositories.",
-    "input_schema": {
-        "type": "object",
-        "properties": {
-            "classifications": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "repo_id": {"type": "integer"},
-                        "category": {"type": "string", "enum": CATEGORIES},
-                        "domain": {"type": "string", "enum": DOMAINS},
-                        "is_ai_built_or_related": {"type": "boolean"},
-                        "confidence": {"type": "number"},
+# Built from the DB by load_taxonomy(). strict:True makes the enums binding —
+# without it they are advisory and the model invents values.
+SYSTEM_PROMPT = ""
+TOOL = None
+
+
+def load_taxonomy(con):
+    """Populate CATEGORIES, DOMAINS, SYSTEM_PROMPT and TOOL from dim_taxonomy."""
+    global CATEGORIES, DOMAINS, SYSTEM_PROMPT, TOOL
+    rows = con.execute(
+        "SELECT axis, slug, description FROM dim_taxonomy ORDER BY axis, sort_order"
+    ).fetchall()
+    if not rows:
+        sys.exit("dim_taxonomy is empty — seed it with seed_taxonomy.sql")
+    cats = [(s, d) for a, s, d in rows if a == "category"]
+    doms = [(s, d) for a, s, d in rows if a == "domain"]
+    CATEGORIES = [s for s, _ in cats]
+    DOMAINS = [s for s, _ in doms]
+    SYSTEM_PROMPT = PROMPT_TEMPLATE.format(
+        categories="\n".join(f"- {s}: {d}" for s, d in cats),
+        domains="\n".join(f"- {s}: {d}" for s, d in doms),
+    )
+    TOOL = {
+        "name": "classify_repos",
+        "description": "Classify a batch of GitHub repositories.",
+        "strict": True,
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "classifications": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "repo_id": {"type": "integer"},
+                            "category": {"type": "string", "enum": CATEGORIES},
+                            "domain": {"type": "string", "enum": DOMAINS},
+                            "is_ai_built_or_related": {"type": "boolean"},
+                            "confidence": {"type": "number"},
+                        },
+                        "required": ["repo_id", "category", "domain",
+                                     "is_ai_built_or_related", "confidence"],
+                        "additionalProperties": False,
                     },
-                    "required": ["repo_id", "category", "domain",
-                                 "is_ai_built_or_related", "confidence"],
                 },
             },
+            "required": ["classifications"],
+            "additionalProperties": False,
         },
-        "required": ["classifications"],
-    },
-}
+    }
 
 
 def load_key():
-    key = os.environ.get("ANTHROPIC_API_KEY")
+    key = os.environ.get("ANTHROPIC_TOKEN")
     if key:
         return key
     env = os.path.join(os.path.dirname(__file__), ".env")
     if os.path.exists(env):
         for line in open(env):
-            if line.strip().startswith("ANTHROPIC_API_KEY="):
+            if line.strip().startswith("ANTHROPIC_TOKEN="):
                 return line.split("=", 1)[1].strip().strip('"').strip("'")
     return None
 
@@ -252,18 +253,25 @@ def run_batch(con, chunks, hash_by_id, stats):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--batch", action="store_true", help="use Message Batches API (bulk)")
+    ap.add_argument("--limit", type=int, help="classify a random sample of N repos")
+    ap.add_argument("--seed", type=int, default=0, help="sampling seed (reproducible)")
     args = ap.parse_args()
 
     if not API_KEY:
-        print("ANTHROPIC_API_KEY not set (env or .env)", file=sys.stderr)
+        print("ANTHROPIC_TOKEN not set (env or .env)", file=sys.stderr)
         sys.exit(1)
 
     con = sqlite3.connect(DB_PATH)
     con.execute("PRAGMA busy_timeout=15000")
+    load_taxonomy(con)
     repos = repos_to_classify(con)
     print(f"{len(repos)} repos to classify ({'batch' if args.batch else 'sync'} mode)")
     if not repos:
         return
+    if args.limit and args.limit < len(repos):
+        random.seed(args.seed)
+        repos = random.sample(repos, args.limit)
+        print(f"sampling {len(repos)} at random (seed={args.seed})")
     hash_by_id = {r["repo_id"]: r["hash"] for r in repos}
     chunks = [repos[i:i + BATCH_SIZE] for i in range(0, len(repos), BATCH_SIZE)]
 
