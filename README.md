@@ -252,7 +252,7 @@ Shape of it:
 
 - GH Archive / BigQuery: **$0** (not used).
 - GitHub API (discovery + daily metrics): **$0** (rate-limited only).
-- Bulk classification: **~$35–45 one-time** (batched Batch API; no caching on Haiku).
+- Bulk classification: **~$57 one-time** (measured on samples; batched Batch API, no caching on Haiku). Earlier ~$35–45 estimate was low on output tokens.
 - Daily classification: **cents/day**.
 - Site hosting: **$0** (static JSON, no backend).
 - Pipeline hosting: **$0** during dev (local); **$0–5/mo** in production
@@ -265,7 +265,9 @@ Shape of it:
 - [x] Schema finalized (`schema.sql`) and DB recreated with full field set (incl. `node_id`, `tier`).
 - [x] Discovery script: Search API → **262,902 repos** in `dim_repo` (created 2021-07-19..2026-07-21, stars ≥50, `fork:false`). Full clean run takes **~4.7 h**. `discover.py` retries 5xx *and* connection-drop exceptions — both killed earlier runs mid-crawl.
 - [x] Foundation metrics snapshot: **262,897 anchor rows @ 2026-07-21** (~2 h, 0 errors); 5 repos gone/inaccessible. Watchers confirmed independent of stars (only 2 coincidental matches vs 100% in the REST-era pilot).
-- [x] Rework `classify.py` to batched Batch API (`--batch`); sync mode for daily. Pending: full bulk run (~$35–45).
+- [x] Rework `classify.py` to batched Batch API (`--batch`); sync mode for daily. Reads `ANTHROPIC_TOKEN` (not `ANTHROPIC_API_KEY`) from `.env`.
+- [x] Classification taxonomy finalized: 14 categories (form) × 29 domains (subject), two orthogonal axes, no `-general` buckets, `unknown`/`other` split. Lives in `dim_taxonomy` (seed: `seed_taxonomy.sql`) as the single source of truth — `classify.py` builds its prompt/enums from it, `aggregate.py` emits `taxonomy.json`. `strict:true` enforces the enums (advisory enums leaked invalid values in 7% of a sample). Prompt trimmed to ~1,440 tokens.
+- [ ] **NEXT: bulk classification.** Run `python3 classify.py --batch` — ~262,600 repos (the 300-repo validation sample is skipped via `description_hash`), **~$57** one-time via Batch API (measured: ~155 in + ~50 out tok/repo). Async; machine need not stay awake.
 - [x] Decided: **weekly** metrics resolution, **GitHub Actions + Cloudflare R2** ($0) for production.
 - [ ] Daily job (discover + classify + aggregate) and weekly job (metrics + retention).
 - [x] Gitignored `whats_building.db` (+ logs, `__pycache__`, `site/data/`) and untracked it. History was never bloated — the committed blob was the 0.1 MB pilot DB, so no rewrite needed.
