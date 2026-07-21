@@ -81,6 +81,9 @@ Real count via GitHub Search API: **~262k repos**.
   the 100 sample for ~$11–20 more one-time and **zero** extra recurring cost.
 - The `created:>{window}` + `stars:>=N` filter structurally overrepresents
   AI-tooling-about-AI-tooling. That bias is accepted scope, not a bug.
+- The star floor applies at **discovery time only**. Repos that later drop below
+  50 stars stay tracked (8 did within hours of the first snapshot). This is
+  intended — dropping them would bias the trend data toward survivors.
 
 ## Data sources
 
@@ -261,7 +264,7 @@ Shape of it:
 - [x] Architecture designed and locked (this doc).
 - [x] Schema finalized (`schema.sql`) and DB recreated with full field set (incl. `node_id`, `tier`).
 - [x] Discovery script: Search API → **262,902 repos** in `dim_repo` (created 2021-07-19..2026-07-21, stars ≥50, `fork:false`). Full clean run takes **~4.7 h**. `discover.py` retries 5xx *and* connection-drop exceptions — both killed earlier runs mid-crawl.
-- [~] Foundation metrics snapshot: `snapshot.py` built + validated (real watchers ≠ stars confirmed); full anchor run pending.
+- [x] Foundation metrics snapshot: **262,897 anchor rows @ 2026-07-21** (~2 h, 0 errors); 5 repos gone/inaccessible. Watchers confirmed independent of stars (only 2 coincidental matches vs 100% in the REST-era pilot).
 - [x] Rework `classify.py` to batched Batch API (`--batch`); sync mode for daily. Pending: full bulk run (~$35–45).
 - [x] Decided: **weekly** metrics resolution, **GitHub Actions + Cloudflare R2** ($0) for production.
 - [ ] Daily job (discover + classify + aggregate) and weekly job (metrics + retention).
