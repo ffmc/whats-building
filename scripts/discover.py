@@ -18,7 +18,8 @@ from datetime import date, datetime, timedelta, timezone
 
 import requests
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "whats_building.db")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(ROOT, "whats_building.db")
 API = "https://api.github.com/search/repositories"
 STARS_MIN = 50
 WINDOW_START = date(2021, 7, 19)
@@ -28,7 +29,7 @@ def _load_token():
     tok = os.environ.get("GITHUB_TOKEN")
     if tok:
         return tok
-    env = os.path.join(os.path.dirname(__file__), ".env")
+    env = os.path.join(ROOT, ".env")
     if os.path.exists(env):
         for line in open(env):
             if line.strip().startswith("GITHUB_TOKEN="):

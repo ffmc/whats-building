@@ -23,7 +23,8 @@ import requests
 
 from discover import TOKEN  # reuse .env loader
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "whats_building.db")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(ROOT, "whats_building.db")
 GQL = "https://api.github.com/graphql"
 CHUNK = 100
 REQ_DELAY = 0.5

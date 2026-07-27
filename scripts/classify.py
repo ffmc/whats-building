@@ -21,10 +21,14 @@ import time
 import urllib.request
 from datetime import datetime, timezone
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "whats_building.db")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(ROOT, "whats_building.db")
 MODEL = "claude-haiku-4-5"
 API = "https://api.anthropic.com/v1"
 BATCH_SIZE = 20
+# Chunks per Batch API submission. The full run is ~146 MB of requests; splitting
+# keeps each POST ~22 MB and lands results in the DB incrementally.
+SUBMIT_CHUNKS = 2000
 
 # Haiku 4.5 pricing per Mtok. Batch API halves both. Verify before trusting totals.
 PRICE_IN, PRICE_OUT = 1.00, 5.00
@@ -76,7 +80,7 @@ def load_taxonomy(con):
         "SELECT axis, slug, description FROM dim_taxonomy ORDER BY axis, sort_order"
     ).fetchall()
     if not rows:
-        sys.exit("dim_taxonomy is empty — seed it with seed_taxonomy.sql")
+        sys.exit("dim_taxonomy is empty — seed it with sql/seed_taxonomy.sql")
     cats = [(s, d) for a, s, d in rows if a == "category"]
     doms = [(s, d) for a, s, d in rows if a == "domain"]
     CATEGORIES = [s for s, _ in cats]
@@ -119,7 +123,7 @@ def load_key():
     key = os.environ.get("ANTHROPIC_TOKEN")
     if key:
         return key
-    env = os.path.join(os.path.dirname(__file__), ".env")
+    env = os.path.join(ROOT, ".env")
     if os.path.exists(env):
         for line in open(env):
             if line.strip().startswith("ANTHROPIC_TOKEN="):
@@ -228,26 +232,29 @@ def run_sync(con, chunks, hash_by_id, stats):
 
 
 def run_batch(con, chunks, hash_by_id, stats):
-    requests = [{"custom_id": f"c{i}", "params": params(c)} for i, c in enumerate(chunks)]
-    batch = post("/messages/batches", {"requests": requests})
-    bid = batch["id"]
-    print(f"  submitted batch {bid} ({len(requests)} requests)")
-    while True:
-        b = json.loads(get(f"/messages/batches/{bid}"))
-        if b["processing_status"] == "ended":
-            break
-        counts = b.get("request_counts", {})
-        print(f"  processing… {counts}")
-        time.sleep(30)
-    for line in get(b["results_url"]).splitlines():
-        result = json.loads(line)
-        if result["result"]["type"] == "succeeded":
-            msg = result["result"]["message"]
-            stats["in"] += msg["usage"]["input_tokens"]
-            stats["out"] += msg["usage"]["output_tokens"]
-            write(con, tool_output(msg), hash_by_id, stats)
-        else:
-            print(f"  {result['custom_id']}: {result['result']['type']}", file=sys.stderr)
+    groups = [chunks[i:i + SUBMIT_CHUNKS] for i in range(0, len(chunks), SUBMIT_CHUNKS)]
+    for g, group in enumerate(groups):
+        requests = [{"custom_id": f"g{g}c{i}", "params": params(c)}
+                    for i, c in enumerate(group)]
+        batch = post("/messages/batches", {"requests": requests})
+        bid = batch["id"]
+        print(f"  batch {g+1}/{len(groups)} submitted {bid} ({len(requests)} requests)")
+        while True:
+            b = json.loads(get(f"/messages/batches/{bid}"))
+            if b["processing_status"] == "ended":
+                break
+            print(f"  processing… {b.get('request_counts', {})}")
+            time.sleep(30)
+        for line in get(b["results_url"]).splitlines():
+            result = json.loads(line)
+            if result["result"]["type"] == "succeeded":
+                msg = result["result"]["message"]
+                stats["in"] += msg["usage"]["input_tokens"]
+                stats["out"] += msg["usage"]["output_tokens"]
+                write(con, tool_output(msg), hash_by_id, stats)
+            else:
+                print(f"  {result['custom_id']}: {result['result']['type']}", file=sys.stderr)
+        print(f"  batch {g+1}/{len(groups)} written  classified={stats['done']}")
 
 
 def main():

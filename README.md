@@ -52,7 +52,7 @@ flowchart TD
 
 ## Data model
 
-Full DDL in `schema.sql`. SQLite locally (`whats_building.db`) during development;
+Full DDL in `sql/schema.sql`. SQLite locally (`whats_building.db`) during development;
 migrate to Supabase (Postgres) once the pipeline is proven. Schema is kept
 Postgres-compatible.
 
@@ -230,7 +230,7 @@ unattended. Two constraints shaped the choice:
 **Decided: GitHub Actions + Cloudflare R2, at $0.** Weekly resolution keeps the
 DB ~340 MB, well inside R2's 10 GB free tier with no egress fees. Rejected:
 Hetzner CX22 (~€4/mo), Fly.io (~$5/mo), Turso/Cloudflare D1 (hosted SQLite — the
-existing `schema.sql` would port unchanged, but they still need external compute),
+existing `sql/schema.sql` would port unchanged, but they still need external compute),
 Supabase Pro ($25/mo, buying Postgres features this workload never uses).
 
 Shape of it:
@@ -262,15 +262,17 @@ Shape of it:
 
 - [x] Pilot: 100 repos pulled (GitHub API), classified, one metrics snapshot.
 - [x] Architecture designed and locked (this doc).
-- [x] Schema finalized (`schema.sql`) and DB recreated with full field set (incl. `node_id`, `tier`).
+- [x] Schema finalized (`sql/schema.sql`) and DB recreated with full field set (incl. `node_id`, `tier`).
 - [x] Discovery script: Search API → **262,902 repos** in `dim_repo` (created 2021-07-19..2026-07-21, stars ≥50, `fork:false`). Full clean run takes **~4.7 h**. `discover.py` retries 5xx *and* connection-drop exceptions — both killed earlier runs mid-crawl.
 - [x] Foundation metrics snapshot: **262,897 anchor rows @ 2026-07-21** (~2 h, 0 errors); 5 repos gone/inaccessible. Watchers confirmed independent of stars (only 2 coincidental matches vs 100% in the REST-era pilot).
 - [x] Rework `classify.py` to batched Batch API (`--batch`); sync mode for daily. Reads `ANTHROPIC_TOKEN` (not `ANTHROPIC_API_KEY`) from `.env`.
-- [x] Classification taxonomy finalized: 14 categories (form) × 29 domains (subject), two orthogonal axes, no `-general` buckets, `unknown`/`other` split. Lives in `dim_taxonomy` (seed: `seed_taxonomy.sql`) as the single source of truth — `classify.py` builds its prompt/enums from it, `aggregate.py` emits `taxonomy.json`. `strict:true` enforces the enums (advisory enums leaked invalid values in 7% of a sample). Prompt trimmed to ~1,440 tokens.
-- [ ] **NEXT: bulk classification.** Run `python3 classify.py --batch` — ~262,600 repos (the 300-repo validation sample is skipped via `description_hash`), **~$57** one-time via Batch API (measured: ~155 in + ~50 out tok/repo). Async; machine need not stay awake.
+- [x] Classification taxonomy finalized: 14 categories (form) × 29 domains (subject), two orthogonal axes, no `-general` buckets, `unknown`/`other` split. Lives in `dim_taxonomy` (seed: `sql/seed_taxonomy.sql`) as the single source of truth — `classify.py` builds its prompt/enums from it, `aggregate.py` emits `taxonomy.json`. `strict:true` enforces the enums (advisory enums leaked invalid values in 7% of a sample). Prompt trimmed to ~1,440 tokens.
+- [x] Bulk classification done: **262,901 / 262,902 repos** classified for **$56.65** (7 batches of ~2,000 chunks; 5 requests errored, mopped up by a re-run). Headline result: AI-related share of newly-created repos runs 14.1% (2021) → 28.6% (2023) → 50.2% (2026, partial year). One repo the model never echoed back; not chased.
 - [x] Decided: **weekly** metrics resolution, **GitHub Actions + Cloudflare R2** ($0) for production.
 - [ ] Daily job (discover + classify + aggregate) and weekly job (metrics + retention).
 - [x] Gitignored `whats_building.db` (+ logs, `__pycache__`, `site/data/`) and untracked it. History was never bloated — the committed blob was the 0.1 MB pilot DB, so no rewrite needed.
-- [~] `aggregate.py` stubbed (DB → static JSON). Runs; output is thin until classification lands.
-- [ ] Web page (viz) — static site consuming `site/data/*.json`.
+- [x] `aggregate.py` (DB → static JSON). Emits `summary.json` (now incl. `ai_by_year` with a `partial` flag for 2021/2026, and `star_buckets`), `taxonomy.json`, `trends.json`, `top/<category>.json`.
+- [~] Web page (viz) — **first draft** at `site/index.html`, static, no dependencies, consumes `site/data/*.json`. Six sections: AI share by year (the headline), category mix, top domains, creation-by-month with the March spike, star distribution, languages.Every chart has hover tooltips + a data-table fallback; light/dark both validated against the palette gates. Serve with `python3 -m http.server` from `site/` — `file://` breaks the `fetch`.
+  - Deliberate framing: this is a **trend-analysis page, not a discovery product**. "Cool" is not a column in the schema, and with one metrics snapshot there is no velocity signal — so the page reports composition and change-in-composition, and says so in a "How to read this" section that states the trending-sample bias and the survivorship inflation on recent years.
+  - Open: `trends.json` and `top/*.json` are generated but unused by the page; they become useful once weekly snapshots give real momentum data.
 - [ ] Actions workflows + R2 state push/pull; secrets (PAT, Anthropic key, R2 creds).

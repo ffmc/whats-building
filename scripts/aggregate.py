@@ -12,7 +12,8 @@ import os
 import sqlite3
 from collections import defaultdict
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "whats_building.db")
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(ROOT, "whats_building.db")
 BOOM_DATE = "2022-11-30"  # ChatGPT launch: the pre/post cohort split
 TOP_N = 100
 
@@ -78,6 +79,30 @@ def summary(con):
                COUNT(*)
         FROM fact_repo_classification GROUP BY 1
     """))
+    # 2021 and 2026 are partial (window opens 2021-07-19, anchor taken 2026-07-21);
+    # the site marks them so the curve isn't read as a full-year drop.
+    ai_by_year = [
+        {"year": y, "total": tot, "ai": ai, "pct": round(100.0 * ai / tot, 1),
+         "partial": y in ("2021", "2026")}
+        for y, tot, ai in con.execute("""
+            SELECT strftime('%Y', r.created_at), COUNT(*),
+                   SUM(c.is_ai_built_or_related)
+            FROM dim_repo r JOIN fact_repo_classification c USING (repo_id)
+            GROUP BY 1 ORDER BY 1
+        """)
+    ]
+    star_buckets = list(con.execute("""
+        SELECT CASE WHEN stargazers_count < 100 THEN '50-99'
+                    WHEN stargazers_count < 250 THEN '100-249'
+                    WHEN stargazers_count < 500 THEN '250-499'
+                    WHEN stargazers_count < 1000 THEN '500-999'
+                    WHEN stargazers_count < 5000 THEN '1k-5k'
+                    WHEN stargazers_count < 10000 THEN '5k-10k'
+                    ELSE '10k+' END,
+               COUNT(*)
+        FROM fact_repo_metrics
+        GROUP BY 1 ORDER BY MIN(stargazers_count)
+    """))
     return {
         "total_repos": con.execute("SELECT COUNT(*) FROM dim_repo").fetchone()[0],
         "boom_date": BOOM_DATE,
@@ -88,6 +113,8 @@ def summary(con):
         "by_language": by_lang,
         "cohort": cohort,
         "ai_related_by_cohort": ai_by_cohort,
+        "ai_by_year": ai_by_year,
+        "star_buckets": star_buckets,
     }
 
 
@@ -136,7 +163,7 @@ def dump(path, obj):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=os.path.join(os.path.dirname(__file__), "site", "data"))
+    ap.add_argument("--out", default=os.path.join(ROOT, "site", "data"))
     args = ap.parse_args()
 
     con = sqlite3.connect(DB_PATH)

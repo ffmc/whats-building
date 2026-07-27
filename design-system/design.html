@@ -1,0 +1,415 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whats Building — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --color-primary: #141311;
+  --color-on-primary: #f7f5f0;
+  --color-surface: #f7f5f0;
+  --color-surface-raised: #fbf9f5;
+  --color-text-primary: #141311;
+  --color-text-secondary: #4a463e;
+  --color-text-muted: #8a8478;
+  --color-border: rgba(20,19,17,0.12);
+  --color-focus-ring: #0058e6;
+  --color-data-baseline: #0058e6;
+  --color-data-ai: #c81152;
+  --color-success: #3f7a52;
+  --color-warning: #9c6b1f;
+  --color-danger: #a13b2e;
+  --color-info: #0058e6;
+
+  --font-display: 'IBM Plex Sans', sans-serif;
+  --font-body: 'IBM Plex Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  --space-xs: 4px; --space-sm: 8px; --space-md: 16px; --space-lg: 32px;
+  --space-xl: 64px; --space-2xl: 96px; --space-3xl: 160px;
+
+  --radius-sm: 4px; --radius-md: 6px; --radius-lg: 0px; --radius-full: 999px;
+
+  --elevation-flat-shadow: none;
+  --elevation-raised-shadow: 0 8px 24px rgba(0,0,0,0.18);
+}
+[data-theme="dark"] {
+  --color-primary: #f5f2ea;
+  --color-on-primary: #0d0d0e;
+  --color-surface: #0d0d0e;
+  --color-surface-raised: #18181a;
+  --color-text-primary: #f5f2ea;
+  --color-text-secondary: #c9c3b6;
+  --color-text-muted: #8f887a;
+  --color-border: rgba(245,242,234,0.14);
+  --color-focus-ring: #3d94ff;
+  --color-data-baseline: #3d94ff;
+  --color-data-ai: #ff4d84;
+  --color-success: #6fae82;
+  --color-warning: #d9a441;
+  --color-danger: #e2695a;
+  --color-info: #3d94ff;
+  --elevation-raised-shadow: 0 8px 28px rgba(0,0,0,0.5);
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--color-surface); color: var(--color-text-primary);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.7;
+  transition: background .2s, color .2s;
+}
+.wrap { max-width: 1080px; margin: 0 auto; padding: var(--space-xl) var(--space-lg) var(--space-3xl); }
+h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; margin: 0 0 var(--space-sm); }
+.page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-2xl); gap: var(--space-lg); }
+.page-header h1 { font-size: 2.5rem; }
+.page-header p { color: var(--color-text-secondary); max-width: 60ch; margin: 0; }
+.mirror-note { font-size: 0.8rem; color: var(--color-text-muted); margin-top: var(--space-xs); }
+
+.toggle-btn {
+  font-family: var(--font-body); font-size: 0.875rem; padding: 8px 18px;
+  border-radius: var(--radius-full); border: 1px solid var(--color-border);
+  background: var(--color-surface-raised); color: var(--color-text-primary); cursor: pointer;
+  white-space: nowrap;
+}
+.toggle-btn:hover { border-color: var(--color-text-secondary); }
+
+section { margin: var(--space-2xl) 0; }
+section > h2 {
+  font-size: 0.75rem; font-weight: 500; letter-spacing: 0.03em; text-transform: uppercase;
+  color: var(--color-text-muted); font-family: var(--font-body);
+  border-bottom: 1px solid var(--color-border); padding-bottom: var(--space-sm); margin-bottom: var(--space-lg);
+}
+
+/* colors */
+.swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-md); }
+.swatch { border: 1px solid var(--color-border); border-radius: var(--radius-lg); overflow: hidden; }
+.swatch-color { height: 72px; display: flex; align-items: flex-end; padding: var(--space-sm); font-family: var(--font-mono); font-size: 0.75rem; }
+.swatch-meta { padding: var(--space-sm) var(--space-md) var(--space-md); background: var(--color-surface-raised); }
+.swatch-meta .name { font-weight: 600; font-size: 0.9rem; }
+.swatch-meta .hex { font-family: var(--font-mono); font-size: 0.75rem; color: var(--color-text-muted); }
+
+/* type */
+.type-row { display: flex; align-items: baseline; gap: var(--space-lg); padding: var(--space-md) 0; border-bottom: 1px solid var(--color-border); }
+.type-sample { flex: 1; font-family: var(--font-display); color: var(--color-text-primary); }
+.type-sample.mono { font-family: var(--font-mono); }
+.type-spec { width: 220px; flex-shrink: 0; font-family: var(--font-mono); font-size: 0.75rem; color: var(--color-text-muted); line-height: 1.6; }
+
+/* spacing */
+.space-row { display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-sm); }
+.space-bar { background: var(--color-data-baseline); height: 20px; }
+.space-label { font-family: var(--font-mono); font-size: 0.8rem; width: 100px; }
+
+/* radius */
+.radius-grid { display: flex; gap: var(--space-lg); flex-wrap: wrap; }
+.radius-box { width: 96px; height: 96px; background: var(--color-surface-raised); border: 1px solid var(--color-border); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 0.75rem; color: var(--color-text-secondary); text-align: center; }
+
+/* elevation */
+.elevation-grid { display: flex; gap: var(--space-lg); flex-wrap: wrap; }
+.elevation-card { width: 220px; padding: var(--space-lg); background: var(--color-surface-raised); border-radius: var(--radius-lg); font-size: 0.875rem; color: var(--color-text-secondary); }
+.elevation-card.flat { border: 1px solid var(--color-border); }
+.elevation-card.raised { box-shadow: var(--elevation-raised-shadow); }
+
+/* components */
+.comp-block { margin-bottom: var(--space-xl); }
+.comp-title { font-weight: 600; margin-bottom: var(--space-sm); }
+.comp-row { display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: center; margin-bottom: var(--space-sm); }
+.comp-label { font-family: var(--font-mono); font-size: 0.75rem; color: var(--color-text-muted); width: 100%; margin-bottom: 4px; }
+
+.btn { font-family: var(--font-display); font-weight: 600; font-size: 0.9rem; padding: 10px 20px; border-radius: var(--radius-sm); cursor: pointer; border: 1px solid transparent; }
+.btn-primary { background: var(--color-primary); color: var(--color-on-primary); }
+.btn-secondary { background: transparent; color: var(--color-text-primary); border-color: var(--color-border); }
+.btn-ghost { background: transparent; color: var(--color-text-primary); }
+.btn.is-disabled { opacity: 0.4; cursor: not-allowed; }
+.btn.is-focus { outline: 2px solid var(--color-focus-ring); outline-offset: 2px; }
+
+.select-box { font-family: var(--font-body); font-size: 0.9rem; padding: 9px 14px; border-radius: var(--radius-sm); border: 1px solid var(--color-border); background: var(--color-surface-raised); color: var(--color-text-primary); }
+
+.segmented { display: inline-flex; border-radius: var(--radius-full); background: var(--color-surface-raised); border: 1px solid var(--color-border); padding: 3px; }
+.segmented span { padding: 7px 18px; border-radius: var(--radius-full); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--font-body); cursor: pointer; }
+.segmented span.selected { background: var(--color-data-ai); color: #fff; }
+
+.chip { display: inline-flex; align-items: center; gap: 10px; padding: 9px 18px; border-radius: var(--radius-full); background: var(--color-surface-raised); box-shadow: var(--elevation-raised-shadow); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; border: 1.5px solid var(--color-data-baseline); }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--color-data-baseline); flex-shrink: 0; }
+.chip button { border: none; background: none; color: var(--color-text-muted); cursor: pointer; font-size: 1rem; text-transform: none; font-weight: 400; letter-spacing: 0; }
+
+.select-box.focused { border: 2px solid var(--color-data-baseline); }
+
+.font-tag { font-family: var(--font-mono); font-size: 0.65rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.03em; margin-top: 4px; display: block; }
+
+.signature-device { position: relative; height: 320px; background: var(--color-surface); border: 1px solid var(--color-border); overflow: hidden; display: flex; align-items: center; margin-bottom: var(--space-md); }
+.signature-device .bg-word {
+  position: absolute; right: -0.15em; top: 50%; transform: translateY(-50%) rotate(90deg) translateX(0);
+  transform-origin: right center; font-family: var(--font-display); font-weight: 700; font-size: 8rem;
+  color: var(--color-data-ai); letter-spacing: -0.03em; white-space: nowrap; line-height: 1;
+}
+.signature-device .fg-content { position: relative; z-index: 1; padding: 0 var(--space-2xl); max-width: 60%; }
+.signature-device .fg-content .eyebrow { color: var(--color-data-baseline); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-sm); }
+.signature-device .fg-content h3 { font-size: 1.5rem; margin: 0 0 var(--space-sm); color: var(--color-text-primary); }
+.signature-device .fg-content p { color: var(--color-text-secondary); font-size: 0.9rem; margin: 0; }
+
+.tag { display: inline-block; padding: 3px 9px; border-radius: var(--radius-sm); font-size: 0.7rem; font-family: var(--font-mono); font-weight: 700; }
+.tag-ai { background: var(--color-data-ai); color: #fff; }
+.tag-neutral { background: var(--color-border); color: var(--color-text-secondary); }
+
+.card-demo { border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface-raised); padding: var(--space-md); width: 240px; }
+.card-demo:hover { border-color: var(--color-text-secondary); }
+.card-demo .t { font-weight: 600; margin-bottom: 4px; }
+.card-demo .m { font-family: var(--font-mono); font-size: 0.8rem; color: var(--color-text-muted); }
+
+table.demo-table { border-collapse: collapse; width: 100%; font-size: 0.875rem; }
+table.demo-table th { text-align: left; color: var(--color-text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; padding: 8px 12px; border-bottom: 1px solid var(--color-border); }
+table.demo-table td { padding: 10px 12px; border-bottom: 1px solid var(--color-border); }
+table.demo-table td.num { font-family: var(--font-mono); text-align: right; }
+table.demo-table tr:hover td { background: var(--color-surface-raised); }
+
+.tooltip-demo { position: relative; display: inline-block; padding: var(--space-lg) var(--space-2xl); background: var(--color-surface-raised); border: 1px solid var(--color-border); }
+.tooltip-bubble { position: absolute; top: -10px; left: 50%; transform: translate(-50%, -100%); background: var(--color-surface-raised); border-radius: var(--radius-sm); box-shadow: var(--elevation-raised-shadow); padding: 8px 12px; font-size: 0.8rem; white-space: nowrap; }
+
+.dd-dos { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); }
+.dd-dos ul { margin: 0; padding-left: 1.1em; }
+.dd-dos li { margin-bottom: var(--space-sm); font-size: 0.9rem; }
+.dd-dos .do-title { color: var(--color-success); font-weight: 600; }
+.dd-dos .dont-title { color: var(--color-danger); font-weight: 600; }
+@media (max-width: 700px) { .dd-dos { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="page-header">
+  <div>
+    <h1>Whats Building</h1>
+    <p>Quiet, analytical, editorial system for a horizontal-scroll data story. Anchored on The Verge (type-as-graphic, flat, high-contrast) and Mendo (restraint, whitespace, minimal monochrome).</p>
+    <p class="mirror-note">Mirrors design-system/design.md — generated from its token values, not a fresh read of the source imagery.</p>
+  </div>
+  <button class="toggle-btn" id="theme-toggle">Toggle dark mode</button>
+</div>
+
+<section>
+  <h2>Colors</h2>
+  <div class="swatch-grid" id="color-swatches"></div>
+</section>
+
+<section>
+  <h2>Typography</h2>
+  <div id="type-rows"></div>
+</section>
+
+<section>
+  <h2>Signature Device — type as graphic</h2>
+  <div class="signature-device">
+    <div class="bg-word">AI</div>
+    <div class="fg-content">
+      <div class="eyebrow">The arc</div>
+      <h3>Half of everything, now</h3>
+      <p>Oversized display type at full saturation, used as background art behind the actual content — not a headline, a graphic device. One per major beat, never repeated as a pattern.</p>
+    </div>
+  </div>
+  <span class="font-tag">IBM Plex Sans 700, dataAI at full saturation, rotated 90°</span>
+</section>
+
+<section>
+  <h2>Spacing</h2>
+  <div id="space-rows"></div>
+</section>
+
+<section>
+  <h2>Radius</h2>
+  <div class="radius-grid">
+    <div class="radius-box" style="border-radius: var(--radius-sm)">sm — 4px<br>buttons/inputs</div>
+    <div class="radius-box" style="border-radius: var(--radius-md)">md — 6px<br>dropdown panels</div>
+    <div class="radius-box" style="border-radius: var(--radius-lg)">lg — 0px<br>cards/panels (sharp, deliberate)</div>
+    <div class="radius-box" style="border-radius: var(--radius-full)">full — pill<br>lens bar/toggle only</div>
+  </div>
+</section>
+
+<section>
+  <h2>Elevation &amp; Depth</h2>
+  <div class="elevation-grid">
+    <div class="elevation-card flat">flat — border only. Default for every static surface.</div>
+    <div class="elevation-card raised">raised — one shadow. Tooltips, dropdowns, lens bar only.</div>
+  </div>
+</section>
+
+<section>
+  <h2>Components</h2>
+
+  <div class="comp-block">
+    <div class="comp-title">Button</div>
+    <div class="comp-row">
+      <button class="btn btn-primary">Primary</button>
+      <button class="btn btn-secondary">Secondary</button>
+      <button class="btn btn-ghost">Ghost</button>
+      <button class="btn btn-primary is-disabled">Disabled</button>
+      <button class="btn btn-primary is-focus">Focus</button>
+    </div>
+    <span class="font-tag">IBM Plex Sans 600</span>
+  </div>
+
+  <div class="comp-block">
+    <div class="comp-title">Select</div>
+    <div class="comp-row">
+      <select class="select-box"><option>Category</option><option>web-app</option><option>library-sdk</option></select>
+      <select class="select-box focused"><option>Category (focused)</option></select>
+    </div>
+    <span class="font-tag">IBM Plex Sans 400 · focus state = 2px dataBaseline border</span>
+  </div>
+
+  <div class="comp-block">
+    <div class="comp-title">Segmented Toggle</div>
+    <div class="comp-row">
+      <div class="segmented"><span class="selected">All</span><span>AI</span><span>Non-AI</span></div>
+    </div>
+    <span class="font-tag">IBM Plex Sans 700, uppercase, 0.04em tracking · selected = hard dataAI fill</span>
+  </div>
+
+  <div class="comp-block">
+    <div class="comp-title">Filter Chip / Lens Bar</div>
+    <div class="comp-row"><span class="chip"><span class="dot"></span>Filtered to: Python <button>&times;</button></span></div>
+    <span class="font-tag">IBM Plex Sans 700, uppercase · border/dot color = dataBaseline or dataAI, matches active lens</span>
+  </div>
+
+  <div class="comp-block">
+    <div class="comp-title">Tag</div>
+    <div class="comp-row"><span class="tag tag-ai">AI</span> <span class="tag tag-neutral">library-sdk</span></div>
+    <span class="font-tag">IBM Plex Mono 700 · AI variant = hard dataAI fill, never a tint</span>
+  </div>
+
+  <div class="comp-block">
+    <div class="comp-title">Card</div>
+    <div class="comp-row">
+      <div class="card-demo"><div class="t">openclaw/openclaw</div><div class="m">★ 383,687 · TypeScript</div></div>
+    </div>
+    <span class="font-tag">Title: IBM Plex Sans 600 · Meta: IBM Plex Mono 400</span>
+  </div>
+
+  <div class="comp-block">
+    <div class="comp-title">Table</div>
+    <table class="demo-table">
+      <thead><tr><th>Repo</th><th>Category</th><th class="num">Stars</th></tr></thead>
+      <tbody>
+        <tr><td>openclaw/openclaw</td><td>web-app</td><td class="num">383,687</td></tr>
+        <tr><td>example/repo</td><td>library-sdk</td><td class="num">12,204</td></tr>
+      </tbody>
+    </table>
+    <span class="font-tag">Text columns: IBM Plex Sans 400 · Numeric columns: IBM Plex Mono 400, tabular</span>
+  </div>
+
+  <div class="comp-block">
+    <div class="comp-title">Tooltip</div>
+    <div class="comp-row">
+      <div class="tooltip-demo">Chart point<div class="tooltip-bubble">50.2% AI-related</div></div>
+    </div>
+    <span class="font-tag">Label: IBM Plex Sans 400 · Figure: IBM Plex Mono 700</span>
+  </div>
+
+  <div class="comp-block">
+    <div class="comp-title">Theme Toggle</div>
+    <div class="comp-row"><button class="toggle-btn">Light / Dark</button></div>
+    <span class="font-tag">IBM Plex Sans 400</span>
+  </div>
+</section>
+
+<section>
+  <h2>Do's and Don'ts</h2>
+  <div class="dd-dos">
+    <div>
+      <div class="do-title">Do</div>
+      <ul>
+        <li>Bind every value to a token — no hardcoded hex/px.</li>
+        <li>Reserve IBM Plex Mono strictly for numerals/tabular data.</li>
+        <li>Keep large surfaces sharp; keep pill shapes rare (lens bar, toggle only).</li>
+        <li>Let whitespace separate before reaching for a border or shadow.</li>
+        <li>Use dataAI/dataBaseline as the only meaning-carrying color pair.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="dont-title">Don't</div>
+      <ul>
+        <li>Don't add a third font, shadow tier, or accent hue without flagging it.</li>
+        <li>Don't default to rounded cards / soft shadows / indigo-violet — generic SaaS look.</li>
+        <li>Don't use gradients, frosted glass, or glow effects anywhere.</li>
+        <li>Don't add decorative color or chart-junk to explain a chart.</li>
+        <li>Don't reproduce Beagle-style playfulness — explicitly ruled out for this project.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<script>
+const toggle = document.getElementById('theme-toggle');
+const root = document.documentElement;
+function apply(theme) {
+  root.setAttribute('data-theme', theme);
+  toggle.textContent = theme === 'dark' ? 'Switch to light' : 'Switch to dark';
+}
+apply('light');
+toggle.onclick = () => apply(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+
+const colors = [
+  ['primary', '--color-primary', '#1a1712/#f5f2ea'],
+  ['onPrimary', '--color-on-primary', ''],
+  ['surface', '--color-surface', ''],
+  ['surfaceRaised', '--color-surface-raised', ''],
+  ['textPrimary', '--color-text-primary', ''],
+  ['textSecondary', '--color-text-secondary', ''],
+  ['textMuted', '--color-text-muted', ''],
+  ['border', '--color-border', ''],
+  ['focusRing', '--color-focus-ring', ''],
+  ['dataBaseline', '--color-data-baseline', 'series baseline'],
+  ['dataAI', '--color-data-ai', 'series AI'],
+  ['success', '--color-success', ''],
+  ['warning', '--color-warning', ''],
+  ['danger', '--color-danger', ''],
+  ['info', '--color-info', ''],
+];
+const swatchGrid = document.getElementById('color-swatches');
+colors.forEach(([name, varName]) => {
+  const val = getComputedStyle(root).getPropertyValue(varName).trim();
+  const div = document.createElement('div');
+  div.className = 'swatch';
+  div.innerHTML = `<div class="swatch-color" style="background:var(${varName})"></div>
+    <div class="swatch-meta"><div class="name">${name}</div><div class="hex">${varName}</div></div>`;
+  swatchGrid.append(div);
+});
+// re-render swatches on theme toggle (var() already reacts, but re-touch DOM harmless)
+
+const typeScale = [
+  ['xs',  '0.75rem', 500, 'body', true],
+  ['sm',  '0.875rem', 400, 'body', false],
+  ['base','1rem', 400, 'body', false],
+  ['lg',  '1.25rem', 450, 'body', false],
+  ['xl',  '1.75rem', 600, 'display', false],
+  ['2xl', '2.5rem', 700, 'display', false],
+  ['3xl', '4rem', 700, 'display', false],
+];
+const typeRows = document.getElementById('type-rows');
+typeScale.forEach(([key, size, weight, fam, upper]) => {
+  const row = document.createElement('div');
+  row.className = 'type-row';
+  row.innerHTML = `<div class="type-sample" style="font-size:${size};font-weight:${weight};${upper ? 'text-transform:uppercase;letter-spacing:.03em;font-size:0.8rem' : ''}">${key === 'xs' ? 'Eyebrow label' : 'Half of everything, now'}</div>
+    <div class="type-spec">size ${size}<br>weight ${weight}<br>family ${fam}</div>`;
+  typeRows.append(row);
+});
+const monoRow = document.createElement('div');
+monoRow.className = 'type-row';
+monoRow.innerHTML = `<div class="type-sample mono" style="font-size:4rem;font-weight:700">50.2%</div>
+  <div class="type-spec">size 4xl (clamp)<br>weight 700<br>family mono — numerals only</div>`;
+typeRows.append(monoRow);
+
+const spaceScale = [['xs','4px'],['sm','8px'],['md','16px'],['lg','32px'],['xl','64px'],['2xl','96px'],['3xl','160px']];
+const spaceRowsEl = document.getElementById('space-rows');
+spaceScale.forEach(([key, px]) => {
+  const row = document.createElement('div');
+  row.className = 'space-row';
+  row.innerHTML = `<span class="space-label">${key} — ${px}</span><span class="space-bar" style="width:${px}"></span>`;
+  spaceRowsEl.append(row);
+});
+</script>
+</body>
+</html>
