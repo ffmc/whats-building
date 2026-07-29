@@ -272,7 +272,7 @@ Shape of it:
 - [ ] Daily job (discover + classify + aggregate) and weekly job (metrics + retention).
 - [x] Gitignored `whats_building.db` (+ logs, `__pycache__`, `site/data/`) and untracked it. History was never bloated — the committed blob was the 0.1 MB pilot DB, so no rewrite needed.
 - [x] `aggregate.py` (DB → static JSON). Emits `summary.json` (now incl. `ai_by_year` with a `partial` flag for 2021/2026, and `star_buckets`), `taxonomy.json`, `trends.json`, `top/<category>.json`.
-- [~] Web page (viz) — **first draft** at `site/index.html`, static, no dependencies, consumes `site/data/*.json`. Six sections: AI share by year (the headline), category mix, top domains, creation-by-month with the March spike, star distribution, languages.Every chart has hover tooltips + a data-table fallback; light/dark both validated against the palette gates. Serve with `python3 -m http.server` from `site/` — `file://` breaks the `fetch`.
-  - Deliberate framing: this is a **trend-analysis page, not a discovery product**. "Cool" is not a column in the schema, and with one metrics snapshot there is no velocity signal — so the page reports composition and change-in-composition, and says so in a "How to read this" section that states the trending-sample bias and the survivorship inflation on recent years.
-  - Open: `trends.json` and `top/*.json` are generated but unused by the page; they become useful once weekly snapshots give real momentum data.
+- [ ] Web page (viz) — the first design system and prototype were torn out (2026-07-29); starting over from a fresh design brief.
+  - Framing that survived the teardown: this is a **trend-analysis page, not a discovery product**. "Cool" is not a column in the schema, and with one metrics snapshot there is no velocity signal — so the page reports composition and change-in-composition, and must state the trending-sample bias and the survivorship inflation on recent years.
+  - `trends.json` and `top/*.json` are generated but were unused; they become useful once weekly snapshots give real momentum data.
 - [ ] Actions workflows + R2 state push/pull; secrets (PAT, Anthropic key, R2 creds).
