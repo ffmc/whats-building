@@ -1,0 +1,452 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--color-ground);
+  color: var(--color-text-primary);
+  font-family: var(--font-text);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.app-loading {
+  display: grid;
+  place-items: center;
+  height: 100dvh;
+  color: var(--color-text-muted);
+  font-family: var(--font-numeric);
+}
+
+/* Stage rail — a horizontal timeline: a track with a node per beat, no numbering.
+   Floats as a centered card so it reads as a miniature of the whole story, not a full-bleed header. */
+.stage-rail {
+  position: fixed;
+  top: var(--space-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, calc(100% - var(--space-xl) * 2));
+  height: 56px;
+  z-index: 10;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-md);
+  padding: 0 var(--space-xl);
+  overflow: hidden;
+}
+
+.stage-rail-track {
+  position: absolute;
+  top: 22px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.stage-rail-progress {
+  height: 1px;
+  background: var(--color-primary);
+  transition: width var(--duration-fast) linear;
+}
+
+/* Playhead — the vertical bar riding the mini timeline as the story scrolls */
+.stage-rail-playhead {
+  position: absolute;
+  top: 22px;
+  width: 2px;
+  height: 11px;
+  transform: translate(-50%, -5px);
+  background: var(--color-primary);
+  border-radius: var(--radius-pill);
+  transition: left var(--duration-fast) linear;
+  pointer-events: none;
+}
+
+.stage-rail-nodes {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stage-rail-nodes li {
+  display: flex;
+}
+
+.stage-rail-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  background: none;
+  border: none;
+  padding: var(--space-sm) var(--space-xs) 0;
+  cursor: pointer;
+}
+
+.stage-rail-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--color-ground);
+  border: 1px solid var(--color-border-strong);
+  transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.stage-rail-label {
+  font-family: var(--font-text);
+  font-size: var(--type-micro-size);
+  letter-spacing: var(--type-micro-letter-spacing);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.stage-rail-node:hover .stage-rail-label {
+  color: var(--color-text-secondary);
+}
+
+.stage-rail-node:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+.stage-rail-node[data-visited="true"] .stage-rail-dot {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.stage-rail-node[data-active="true"] .stage-rail-dot {
+  transform: scale(1.6);
+}
+
+.stage-rail-node[data-active="true"] .stage-rail-label {
+  color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+  .stage-rail {
+    padding: 0 var(--space-lg);
+  }
+  .stage-rail-label {
+    display: none;
+  }
+  .stage-rail-node[data-active="true"] .stage-rail-label {
+    display: block;
+    position: absolute;
+    top: 32px;
+  }
+}
+
+/* Control bar — floats as a card matching the stage rail's width, with filter chips in between */
+.control-bar {
+  position: fixed;
+  bottom: var(--space-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(640px, calc(100% - var(--space-xl) * 2));
+  height: 64px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: 0 var(--space-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elevation-md);
+}
+
+.control-bar-context {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  white-space: nowrap;
+}
+
+.control-bar-count {
+  flex: none;
+  font-family: var(--font-numeric);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+}
+
+.control-bar-filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.control-bar-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.control-bar-chip {
+  flex: none;
+  font-family: var(--font-text);
+  font-size: var(--type-micro-size);
+  letter-spacing: var(--type-micro-letter-spacing);
+  color: var(--color-text-muted);
+  background: none;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  padding: var(--space-xs) var(--space-sm);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
+}
+
+.control-bar-chip:hover {
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-strong);
+}
+
+.control-bar-chip:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.control-bar-chip[data-active="true"] {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-ground);
+}
+
+@media (max-width: 768px) {
+  .control-bar-context {
+    display: none;
+  }
+}
+
+/* Horizontal rail */
+.rail {
+  height: 100dvh;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-top: calc(56px + var(--space-lg) * 2);
+  padding-bottom: calc(64px + var(--space-lg) * 2);
+}
+
+.rail-content {
+  display: flex;
+  height: 100%;
+  width: max-content;
+}
+
+.beat-panel {
+  width: 100vw;
+  height: 100%;
+  flex: none;
+  scroll-snap-align: start;
+  overflow: hidden;
+}
+
+/* Every beat: a fixed-size box, text column + chart column filling it exactly.
+   Nothing here may grow taller than the box — no vertical scroll, ever. */
+.beat-split {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2xl);
+  width: 100%;
+  height: 100%;
+  padding: var(--space-xl) var(--space-3xl);
+}
+
+.beat-text {
+  flex: 0 0 34ch;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.beat-chart-col {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-xl) 0;
+}
+
+@media (max-width: 768px) {
+  .rail {
+    scroll-snap-type: x mandatory;
+  }
+
+  .beat-panel {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  .beat-split {
+    flex-direction: column;
+    height: auto;
+    min-height: 100%;
+    padding: var(--space-lg);
+    gap: var(--space-md);
+  }
+
+  .beat-text {
+    flex: 0 0 auto;
+  }
+
+  .beat-chart-col {
+    flex: none;
+    height: 320px;
+    width: 100%;
+    padding: var(--space-md) 0;
+  }
+
+  .beat-headline {
+    font-size: clamp(22px, 6vw, 28px);
+    margin: 0 0 var(--space-md);
+  }
+
+  .beat-body {
+    font-size: var(--type-body-size);
+  }
+
+  .hero-figure {
+    font-size: clamp(28px, 9vw, 40px);
+    margin: 0 0 var(--space-md);
+  }
+}
+
+.beat-eyebrow {
+  font-family: var(--font-numeric);
+  font-size: var(--type-label-size);
+  letter-spacing: var(--type-label-letter-spacing);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  margin: 0 0 var(--space-sm);
+}
+
+.beat-headline {
+  font-family: var(--font-text);
+  font-size: var(--type-headline-size);
+  line-height: var(--type-headline-line-height);
+  font-weight: var(--type-headline-weight);
+  letter-spacing: var(--type-headline-letter-spacing);
+  margin: 0 0 var(--space-lg);
+}
+
+.beat-body {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-lg-size);
+  line-height: var(--type-body-lg-line-height);
+  margin: 0;
+}
+
+.beat-body strong {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* Intro beat */
+.beat-intro {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-3xl);
+}
+
+.beat-intro-headline {
+  font-family: var(--font-text);
+  font-size: var(--type-display-1-size);
+  line-height: var(--type-display-1-line-height);
+  font-weight: var(--type-display-1-weight);
+  letter-spacing: var(--type-display-1-letter-spacing);
+  max-width: 12ch;
+  margin: 0 0 var(--space-xl);
+}
+
+.beat-intro-body {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-lg-size);
+  line-height: var(--type-body-lg-line-height);
+  max-width: 68ch;
+  margin: 0;
+}
+
+@media (max-width: 768px) {
+  .beat-intro {
+    padding: var(--space-lg);
+  }
+  .beat-intro-headline {
+    font-size: clamp(40px, 14vw, 64px);
+    max-width: 8ch;
+  }
+  .beat-intro-body {
+    font-size: var(--type-body-size);
+  }
+}
+
+/* Hero figure */
+.hero-figure {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  column-gap: var(--space-md);
+  font-family: var(--type-hero-family);
+  font-size: var(--type-figure-lg-size);
+  line-height: var(--type-figure-lg-line-height);
+  font-weight: var(--type-figure-lg-weight);
+  letter-spacing: var(--type-figure-lg-letter-spacing);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--space-lg);
+  font-variant-numeric: proportional-nums;
+}
+
+.hero-figure-unit {
+  font-family: var(--font-text);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line-height);
+  letter-spacing: normal;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+/* chart table toggle button */
+.chart-table button {
+  font-family: var(--font-text);
+  font-size: var(--type-body-sm-size);
+  color: var(--color-text-secondary);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs) var(--space-md);
+  cursor: pointer;
+}
+
+.chart-table button:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}

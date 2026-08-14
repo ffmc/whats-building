@@ -103,6 +103,7 @@ def summary(con):
         FROM fact_repo_metrics
         GROUP BY 1 ORDER BY MIN(stargazers_count)
     """))
+    star_histogram = star_distribution(con)
     return {
         "total_repos": con.execute("SELECT COUNT(*) FROM dim_repo").fetchone()[0],
         "boom_date": BOOM_DATE,
@@ -115,7 +116,34 @@ def summary(con):
         "ai_related_by_cohort": ai_by_cohort,
         "ai_by_year": ai_by_year,
         "star_buckets": star_buckets,
+        "star_histogram": star_histogram,
     }
+
+
+def star_distribution(con, bins=48):
+    """Log-space histogram of star counts — raw bin counts with explicit
+    edges, for a true histogram (not smoothed)."""
+    import math
+
+    stars = [row[0] for row in con.execute(
+        "SELECT stargazers_count FROM fact_repo_metrics WHERE stargazers_count >= 50"
+    )]
+    log_stars = [math.log10(s) for s in stars]
+    lo, hi = min(log_stars), max(log_stars)
+    width = (hi - lo) / bins
+    counts = [0] * bins
+    for v in log_stars:
+        idx = min(bins - 1, int((v - lo) / width))
+        counts[idx] += 1
+
+    return [
+        {
+            "starsMin": round(10 ** (lo + i * width)),
+            "starsMax": round(10 ** (lo + (i + 1) * width)),
+            "count": c,
+        }
+        for i, c in enumerate(counts)
+    ]
 
 
 def trends(con):

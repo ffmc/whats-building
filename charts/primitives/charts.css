@@ -1,0 +1,204 @@
+/* Role layer: components name roles, this file maps roles to design-system tokens.
+   Rename a token in design.md and only this block changes. */
+.chart-root {
+  --series-1: var(--charts-series1, #2a78d6);
+  --series-2: var(--charts-series2, #eb6834);
+  --series-3: var(--charts-series3, #1baf7a);
+  --series-4: var(--charts-series4, #eda100);
+  --series-5: var(--charts-series5, #e87ba4);
+  --series-6: var(--charts-series6, #008300);
+  --series-7: var(--charts-series7, #4a3aa7);
+  --series-8: var(--charts-series8, #e34948);
+
+  --chart-surface: var(--color-surface, #fcfcfb);
+  --chart-axis: var(--charts-axis, var(--color-border, #d6d5cf));
+  --chart-grid: var(--charts-grid, var(--color-border, #e8e7e2));
+  --chart-ink: var(--color-text-primary, #0b0b0b);
+  --chart-ink-muted: var(--color-text-muted, #6c6b66);
+
+  margin: 0;
+  font-size: 0.75rem;
+}
+
+.chart-plot {
+  position: relative;
+  width: 100%;
+}
+
+.chart-root[data-fill="true"] {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.chart-root[data-fill="true"] .chart-plot {
+  flex: 1;
+  min-height: 0;
+}
+
+.chart-axis line {
+  stroke: var(--chart-axis);
+  stroke-width: 1;
+}
+
+.chart-axis text {
+  fill: var(--chart-ink-muted);
+  font-size: 0.6875rem;
+}
+
+.chart-grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.chart-mark {
+  transition: opacity 150ms ease-out, fill 150ms ease-out;
+}
+
+.chart-mark[data-dimmed="true"] {
+  opacity: 0.25;
+}
+
+.chart-mark path {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  transform: scaleY(1);
+  transition: transform var(--duration-beat, 1100ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)),
+    filter 150ms ease-out;
+}
+
+.chart-root[data-drawn="false"] .chart-mark path {
+  transform: scaleY(0);
+}
+
+.chart-root[data-drawn="false"] .chart-bar-value {
+  opacity: 0;
+}
+
+.chart-bar-value {
+  opacity: 1;
+  transition: opacity var(--duration-beat, 1100ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+.chart-mark rect {
+  cursor: pointer;
+}
+
+.chart-mark rect:focus-visible {
+  outline: 2px solid var(--color-focus-ring, #FDB1A9);
+  outline-offset: -2px;
+}
+
+.chart-bar-value {
+  fill: var(--chart-ink);
+  font-family: var(--font-numeric, inherit);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.chart-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart-tooltip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1;
+  max-width: 16rem;
+  padding: var(--space-sm, 0.5rem) var(--space-md, 0.75rem);
+  border: 1px solid var(--color-border, #d6d5cf);
+  border-radius: var(--radius-md, 6px);
+  background: var(--color-surface-raised, #ffffff);
+  color: var(--chart-ink);
+  box-shadow: var(--elevation-md, 0 2px 8px rgb(0 0 0 / 0.12));
+  opacity: 0;
+  transition: opacity 120ms ease-out, transform 120ms ease-out;
+}
+
+.chart-tooltip[data-visible="true"] {
+  opacity: 1;
+}
+
+.chart-tooltip-value {
+  color: var(--chart-ink);
+  font-family: var(--font-numeric, inherit);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.chart-tooltip-label {
+  color: var(--chart-ink-muted);
+  font-size: 0.75rem;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md, 0.75rem);
+  margin: 0 0 var(--space-sm, 0.5rem);
+  padding: 0;
+  list-style: none;
+  color: var(--chart-ink-muted);
+}
+
+.chart-legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.chart-legend li[data-dimmed="true"] {
+  opacity: 0.45;
+}
+
+.chart-legend button {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.chart-legend-swatch {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 2px;
+  flex: none;
+}
+
+.chart-table table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: var(--space-md, 0.75rem);
+}
+
+.chart-table th,
+.chart-table td {
+  padding: var(--space-xs, 0.25rem) var(--space-sm, 0.5rem);
+  border-bottom: 1px solid var(--color-border, #e8e7e2);
+  text-align: left;
+}
+
+.chart-table td {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-mark,
+  .chart-tooltip {
+    transition-duration: 0ms;
+  }
+}

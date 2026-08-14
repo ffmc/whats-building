@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signal — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Martian+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ground:#0A0A0F; --ground-sunken:#06060A; --surface:#14141B; --surface-raised:#1D1D26;
+  --text-primary:#F2F4F7; --text-secondary:#C0C6CF; --text-muted:#8B94A0;
+  --border:#26262F; --border-strong:#3A3A47; --focus-ring:#FDB1A9;
+  --primary:#FA4544; --on-primary:#0A0A0F; --accent:#B9FA31; --on-accent:#0A0A0F;
+  --success:#10A8A3; --warning:#D68A00; --danger:#B267E4; --info:#048FF4;
+
+  --cat-1:#FA4544; --cat-2:#2A92BB; --cat-3:#769F26; --cat-4:#B5297B; --cat-5:#A98C35;
+  --seq-1:#C2D3E8; --seq-2:#9CB3D1; --seq-3:#7A94B7; --seq-4:#5A769A; --seq-5:#415A79;
+  --div-ai-1:#B1C4EC; --div-ai-2:#6D95EE; --div-ai-3:#4B70C6; --div-ai-4:#264698;
+  --div-not-1:#FCDD60; --div-not-2:#C7A92A; --div-not-3:#967F1C; --div-not-4:#6B5A10;
+  --div-mid:#74747A;
+  --gridline:#1D1D26; --axis:#3A3A47; --deemphasis:#4A4A57;
+
+  --font-text:"Geist",system-ui,-apple-system,sans-serif;
+  --font-num:"Martian Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+
+  --sp-xs:4px; --sp-sm:8px; --sp-md:16px; --sp-lg:24px; --sp-xl:40px; --sp-2xl:64px; --sp-3xl:104px;
+  --r-sm:3px; --r-md:6px; --r-lg:12px; --r-pill:999px;
+
+  --el-sm:0 1px 2px rgba(0,0,0,.55);
+  --el-md:0 6px 20px rgba(0,0,0,.6);
+  --el-lg:0 18px 56px rgba(0,0,0,.7);
+  --el-glow:0 0 0 1px #26262F, 0 8px 40px rgba(250,69,68,.22);
+
+  --ease-out:cubic-bezier(.22,1,.36,1);
+  --ease-in-out:cubic-bezier(.65,0,.35,1);
+  --d-instant:120ms; --d-fast:240ms; --d-base:420ms; --d-slow:720ms; --d-beat:1100ms;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--text-primary);font-family:var(--font-text);
+  font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:var(--sp-2xl) var(--sp-lg) var(--sp-3xl)}
+h1{font-family:var(--font-text);font-weight:600;font-size:clamp(52px,7vw,120px);
+  line-height:.94;letter-spacing:-.035em;margin:0 0 var(--sp-md)}
+h2{font-family:var(--font-text);font-weight:600;font-size:clamp(26px,2.6vw,40px);
+  line-height:1.1;letter-spacing:-.02em;margin:var(--sp-3xl) 0 var(--sp-md);
+  padding-top:var(--sp-lg);border-top:1px solid var(--border)}
+h3{font-family:var(--font-num);font-size:12px;font-weight:500;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-muted);margin:var(--sp-xl) 0 var(--sp-md)}
+p{max-width:72ch;color:var(--text-secondary)}
+.num,code{font-family:var(--font-num);font-variant-numeric:tabular-nums}
+.lede{font-size:clamp(17px,1.3vw,21px);line-height:1.5;letter-spacing:-.01em;color:var(--text-secondary)}
+.eyebrow{font-family:var(--font-num);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text-muted);display:block;margin-bottom:var(--sp-md)}
+.note{border-left:2px solid var(--primary);padding:var(--sp-sm) 0 var(--sp-sm) var(--sp-md);
+  color:var(--text-secondary);font-size:14px;max-width:72ch;margin:var(--sp-lg) 0}
+.note.warn{border-left-color:var(--warning)}
+
+.grid{display:grid;gap:var(--sp-md);grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+.sw{border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;background:var(--surface)}
+.sw .chip{height:76px}
+.sw .meta{padding:var(--sp-sm) var(--sp-md);font-family:var(--font-num);font-size:10px;
+  letter-spacing:.04em;color:var(--text-muted);display:flex;justify-content:space-between;gap:var(--sp-sm)}
+.sw .meta b{color:var(--text-primary);font-weight:500}
+
+.ramp{display:flex;border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;margin-bottom:var(--sp-sm)}
+.ramp span{flex:1;height:56px;display:flex;align-items:flex-end;justify-content:center;
+  font-family:var(--font-num);font-size:9px;padding-bottom:6px;color:rgba(0,0,0,.78)}
+
+table{border-collapse:collapse;width:100%;margin:var(--sp-md) 0;font-size:14px}
+caption{text-align:left;font-family:var(--font-num);font-size:11px;letter-spacing:.04em;
+  color:var(--text-muted);padding-bottom:var(--sp-sm);text-transform:uppercase}
+th,td{text-align:left;padding:var(--sp-sm) var(--sp-md);border-bottom:1px solid var(--border);vertical-align:top}
+th{font-family:var(--font-num);font-size:11px;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--text-muted);font-weight:500}
+td.n{text-align:right;font-family:var(--font-num);font-variant-numeric:tabular-nums}
+
+.spec{font-family:var(--font-num);font-size:11px;color:var(--text-muted);letter-spacing:.02em;margin-top:var(--sp-xs)}
+.type-row{padding:var(--sp-lg) 0;border-bottom:1px solid var(--border)}
+.t-hero{font-family:var(--font-num);font-weight:700;font-size:clamp(64px,9.5vw,168px);line-height:.9;letter-spacing:-.055em}
+.t-figlg{font-family:var(--font-num);font-weight:700;font-size:clamp(36px,4.5vw,72px);line-height:1;letter-spacing:-.04em}
+.t-d1{font-weight:600;font-size:clamp(52px,7vw,120px);line-height:.94;letter-spacing:-.035em}
+.t-d2{font-weight:600;font-size:clamp(38px,4.5vw,72px);line-height:1;letter-spacing:-.03em}
+.t-hl{font-weight:600;font-size:clamp(26px,2.6vw,40px);line-height:1.1;letter-spacing:-.02em}
+.t-blg{font-size:clamp(17px,1.3vw,21px);line-height:1.5;letter-spacing:-.01em}
+.t-b{font-size:16px;line-height:1.6}
+.t-bsm{font-size:14px;line-height:1.5}
+.t-lbl{font-family:var(--font-num);font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+.t-mic{font-family:var(--font-num);font-size:11px;letter-spacing:.04em}
+
+.demo{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:var(--sp-lg);margin:var(--sp-md) 0}
+.row{display:flex;gap:var(--sp-md);flex-wrap:wrap;align-items:center}
+
+.btn{font-family:var(--font-num);font-size:12px;letter-spacing:.08em;text-transform:uppercase;
+  min-height:44px;padding:0 var(--sp-lg);border-radius:var(--r-md);cursor:pointer;border:1px solid transparent;
+  transition:background var(--d-fast) var(--ease-out),border-color var(--d-fast) var(--ease-out),color var(--d-fast) var(--ease-out)}
+.btn-primary{background:var(--primary);color:var(--on-primary);font-weight:500}
+.btn-primary:hover{filter:brightness(.88)}
+.btn-ghost{background:transparent;color:var(--text-primary);border-color:var(--border-strong)}
+.btn-ghost:hover{border-color:var(--text-muted);background:var(--surface-raised)}
+.btn-quiet{background:transparent;color:var(--text-muted);border-color:transparent}
+.btn-quiet:hover{color:var(--text-primary)}
+.btn:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+
+.chipf{display:inline-flex;align-items:center;gap:var(--sp-xs);font-family:var(--font-num);
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;height:32px;padding:0 var(--sp-md);
+  border-radius:var(--r-sm);border:1px solid var(--border-strong);background:transparent;
+  color:var(--text-secondary);cursor:pointer}
+.chipf[aria-pressed="true"].ai{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.chipf[aria-pressed="true"].not{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.chipf:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+
+.rail{display:flex;gap:2px;border-bottom:1px solid var(--border);padding-bottom:var(--sp-sm)}
+.rail button{flex:1;background:none;border:0;cursor:pointer;padding:var(--sp-sm) var(--sp-xs);
+  font-family:var(--font-num);font-size:10px;letter-spacing:.04em;color:var(--text-muted);
+  text-align:left;border-bottom:2px solid var(--border);
+  transition:color var(--d-fast) var(--ease-out),border-color var(--d-base) var(--ease-out)}
+.rail button[aria-current="step"]{color:var(--text-primary);border-bottom-color:var(--primary)}
+.rail button.visited{color:var(--text-secondary);border-bottom-color:var(--border-strong)}
+.rail button:focus-visible{outline:2px solid var(--focus-ring);outline-offset:2px}
+
+.cbar{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-md);flex-wrap:wrap;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  box-shadow:var(--el-md);padding:var(--sp-md) var(--sp-lg);min-height:64px}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:var(--sp-md);
+  transition:background var(--d-fast) var(--ease-out),border-color var(--d-fast) var(--ease-out)}
+.card:hover{background:var(--surface-raised);border-color:var(--border-strong)}
+.card .slug{font-family:var(--font-num);font-size:13px;color:var(--text-primary)}
+.card .desc{font-size:14px;color:var(--text-secondary);margin:var(--sp-sm) 0;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card .stars{font-family:var(--font-num);font-variant-numeric:tabular-nums;font-size:11px;color:var(--text-muted)}
+
+.tip{display:inline-block;background:var(--surface-raised);border:1px solid var(--border);
+  border-radius:var(--r-md);box-shadow:var(--el-md);padding:var(--sp-sm) var(--sp-md);font-size:14px}
+.glow{box-shadow:var(--el-glow);border-radius:var(--r-lg);padding:var(--sp-lg);background:var(--surface)}
+
+.status{display:flex;gap:var(--sp-md);align-items:flex-start;background:var(--surface);
+  border-left:2px solid var(--info);border-radius:var(--r-md);padding:var(--sp-md);margin-bottom:var(--sp-sm);font-size:14px}
+.status.success{border-left-color:var(--success)} .status.warning{border-left-color:var(--warning)}
+.status.danger{border-left-color:var(--danger)}
+.status .ico{font-family:var(--font-num);font-weight:700;font-size:13px}
+.status.info .ico{color:var(--info)} .status.success .ico{color:var(--success)}
+.status.warning .ico{color:var(--warning)} .status.danger .ico{color:var(--danger)}
+
+.do-dont{display:grid;gap:var(--sp-lg);grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.do-dont ul{margin:0;padding-left:var(--sp-md)}
+.do-dont li{margin-bottom:var(--sp-sm);color:var(--text-secondary);font-size:14px}
+.do h3{color:var(--success)} .dont h3{color:var(--danger)}
+
+.bar-demo{display:flex;flex-direction:column;gap:6px;margin-top:var(--sp-md)}
+.bar-demo .b{height:24px;border-radius:0 var(--r-sm) var(--r-sm) 0;display:flex;align-items:center;
+  padding-left:var(--sp-sm);font-family:var(--font-num);font-size:10px;color:rgba(0,0,0,.8)}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<span class="eyebrow">Design System · alpha · dark-only</span>
+<h1>Signal</h1>
+<p class="lede">A dark, bold, instrument-grade system for a horizontally-scrolling data story about
+what GitHub actually paid attention to.</p>
+
+<div class="note"><strong>Generated file.</strong> This page mirrors <code>design-system/design.md</code>,
+the single source of truth. Edit the Markdown, then regenerate this — never the reverse.</div>
+
+<h2>Overview</h2>
+<p><strong>The palette and the argument are the same thing.</strong> The central finding is a polarity —
+repos are overwhelmingly AI-related or overwhelmingly not, with almost nothing between. That polarity is
+the brand: signal red reads as hot, urgent, alarm-adjacent — the AI pole; neon chartreuse reads as
+radioactive, organic-but-synthetic — the not-AI pole. Both run at full saturation everywhere the polarity
+itself needs to show: buttons, chips, prose.</p>
+<div class="note warn"><strong>The diverging chart is deliberately not brand-colored.</strong> Red and
+chartreuse sit close enough on the deuteranopia confusion axis that the <code>dataviz</code> validator
+collapses them to ΔE 1.4 (floor 6, target 8) — re-lightening one arm doesn't fix it, the hues themselves
+have to differ. So <code>divergingAI</code> / <code>divergingNotAI</code> run a decoupled, validated
+indigo/gold pair instead (worst cross-arm ΔE 21.6 deutan). Brand red/chartreuse still carry the polarity
+everywhere else.</div>
+<p><strong>The numbers are the display face.</strong> Text is Geist and recedes. Every number is Martian
+Mono — including hero figures at 168px. On most sites the headline shouts and the data whispers; here
+<span class="num">50.2%</span> is the loudest object on screen and the sentence around it is quiet. For a
+page whose entire argument is quantitative, that is the honest arrangement.</p>
+<div class="note">Capital and Driftime were references for <em>behaviour</em> — long decelerating motion,
+oversized display type, a persistent bottom control bar — and explicitly not for appearance. Both are
+warm-black with a green accent and a light geometric sans; this system is deliberately none of those.</div>
+
+<h2>Colors</h2>
+<h3>Surfaces &amp; ink</h3>
+<div class="grid">
+  <div class="sw"><div class="chip" style="background:#0A0A0F;border-bottom:1px solid #26262F"></div><div class="meta"><b>ground</b><span>#0A0A0F</span></div></div>
+  <div class="sw"><div class="chip" style="background:#06060A"></div><div class="meta"><b>groundSunken</b><span>#06060A</span></div></div>
+  <div class="sw"><div class="chip" style="background:#14141B"></div><div class="meta"><b>surface</b><span>#14141B</span></div></div>
+  <div class="sw"><div class="chip" style="background:#1D1D26"></div><div class="meta"><b>surfaceRaised</b><span>#1D1D26</span></div></div>
+  <div class="sw"><div class="chip" style="background:#F2F4F7"></div><div class="meta"><b>textPrimary</b><span>17.9:1</span></div></div>
+  <div class="sw"><div class="chip" style="background:#C0C6CF"></div><div class="meta"><b>textSecondary</b><span>11.5:1</span></div></div>
+  <div class="sw"><div class="chip" style="background:#8B94A0"></div><div class="meta"><b>textMuted</b><span>6.4:1</span></div></div>
+  <div class="sw"><div class="chip" style="background:#26262F"></div><div class="meta"><b>border</b><span>#26262F</span></div></div>
+  <div class="sw"><div class="chip" style="background:#3A3A47"></div><div class="meta"><b>borderStrong</b><span>#3A3A47</span></div></div>
+  <div class="sw"><div class="chip" style="background:#FDB1A9"></div><div class="meta"><b>focusRing</b><span>11.3:1</span></div></div>
+</div>
+
+<h3>The two poles</h3>
+<div class="grid">
+  <div class="sw"><div class="chip" style="background:#FA4544"></div><div class="meta"><b>primary · AI</b><span>5.64:1</span></div></div>
+  <div class="sw"><div class="chip" style="background:#B9FA31"></div><div class="meta"><b>accent · not AI</b><span>15.78:1</span></div></div>
+</div>
+<p class="spec">Both poles clear body-text contrast on <code>ground</code> directly — no lighter step
+needed. Both are too light for white-on-fill text (3.50:1 / 1.25:1); use <code>onPrimary</code> /
+<code>onAccent</code> (<code>#0A0A0F</code>) as fill text instead.</p>
+
+<h3>Status — reserved, never a chart series</h3>
+<div class="grid">
+  <div class="sw"><div class="chip" style="background:#10A8A3"></div><div class="meta"><b>success</b><span>6.7:1</span></div></div>
+  <div class="sw"><div class="chip" style="background:#D68A00"></div><div class="meta"><b>warning</b><span>7.1:1</span></div></div>
+  <div class="sw"><div class="chip" style="background:#B267E4"></div><div class="meta"><b>danger</b><span>5.60:1</span></div></div>
+  <div class="sw"><div class="chip" style="background:#048FF4"></div><div class="meta"><b>info</b><span>5.9:1</span></div></div>
+</div>
+
+<div class="note"><strong>Checked against the status colours — no collision.</strong> <code>danger</code>
+(H309.8°) clears <code>primary</code> (H25.8°) at ΔE 25.9 deutan / 27.8 normal-vision, and the
+categorical magenta slot (H350°) at ΔE 16.1 / 17.7 — both well above the 15 normal-vision floor. The
+general rule still stands: <strong>no status state may rely on colour alone</strong>. Every one ships
+with an icon and a text label regardless.</div>
+
+<h3>Categorical — 5 slots, fixed order, no sixth</h3>
+<div class="ramp">
+  <span style="background:#FA4544;color:rgba(255,255,255,.9)">FA4544</span><span style="background:#2A92BB;color:rgba(255,255,255,.9)">2A92BB</span>
+  <span style="background:#769F26">769F26</span>
+  <span style="background:#B5297B;color:rgba(255,255,255,.9)">B5297B</span><span style="background:#A98C35">A98C35</span>
+</div>
+<p class="spec">Worst adjacent CVD ΔE 17.6 (deutan) in this order — red, blue, green, magenta, gold keeps
+the two brand poles non-adjacent; red next to the accent's green step collapses to ΔE 2.0. Validated for
+adjacent-pair use (bars, ribbons, chips) only — re-validate before scatter/bubble/choropleth use.</p>
+
+<h3>Sequential — steel, for plain magnitude</h3>
+<div class="ramp">
+  <span style="background:#C2D3E8">C2D3E8</span><span style="background:#9CB3D1">9CB3D1</span>
+  <span style="background:#7A94B7">7A94B7</span><span style="background:#5A769A;color:rgba(255,255,255,.9)">5A769A</span>
+  <span style="background:#415A79;color:rgba(255,255,255,.9)">415A79</span>
+</div>
+<div class="note"><strong>Why steel and not the primary red.</strong> Magnitude bars appear in beats that
+have nothing to do with AI. If counts were drawn in the AI pole's hue, every bar chart would imply an AI
+reading it doesn't carry. Desaturated steel says "this is just a count," and keeps saturated red and
+chartreuse meaning one thing only. Untouched by the brand-colour change.</div>
+
+<h3>Diverging — AI share (the Sankey scale)</h3>
+<div class="ramp">
+  <span style="background:#6B5A10;color:rgba(255,255,255,.9)">6B5A10</span><span style="background:#967F1C;color:rgba(255,255,255,.9)">967F1C</span>
+  <span style="background:#C7A92A">C7A92A</span><span style="background:#FCDD60">FCDD60</span>
+  <span style="background:#74747A;color:rgba(255,255,255,.9)">74747A</span>
+  <span style="background:#B1C4EC">B1C4EC</span><span style="background:#6D95EE">6D95EE</span>
+  <span style="background:#4B70C6;color:rgba(255,255,255,.9)">4B70C6</span><span style="background:#264698;color:rgba(255,255,255,.9)">264698</span>
+</div>
+<p class="spec">← not AI (gold) · neutral grey midpoint <code>#74747A</code> · AI (indigo) → &nbsp; A
+decoupled pair, not brand red/chartreuse — those collapse to ΔE 1.4 under deuteranopia here. Worst
+cross-arm ΔE 21.6 deutan / 22.1 normal-vision. Each arm validated independently as a single-hue ramp.
+The midpoint is never a third hue.</p>
+
+<h2>Typography</h2>
+<table>
+  <caption>Two families, one job each</caption>
+  <tr><th>Family</th><th>Role</th><th>Weights</th></tr>
+  <tr><td class="num">Geist</td><td>All text — headlines, prose, UI. Recedes on purpose.</td><td class="num">400 · 500 · 600</td></tr>
+  <tr><td class="num">Martian Mono</td><td>All numbers, plus slugs, codes, ticks, eyebrows. Carries the display moment.</td><td class="num">400 · 500 · 700</td></tr>
+</table>
+
+<div class="type-row"><div class="t-hero">50.2%</div><div class="spec">hero · Martian Mono · clamp(64px,9.5vw,168px) · 700 · LH 0.9 · −0.055em</div></div>
+<div class="type-row"><div class="t-hero">262,902</div><div class="spec">hero · always test the LONGEST number in a slot, never a short one</div></div>
+<div class="type-row"><div class="t-figlg">9,072</div><div class="spec">figureLg · Martian Mono · clamp(36px,4.5vw,72px) · 700 · −0.04em</div></div>
+<div class="type-row"><div class="t-d1">Half of everything</div><div class="spec">display1 · Geist · clamp(52px,7vw,120px) · 600 · LH 0.94 · −0.035em</div></div>
+<div class="type-row"><div class="t-d2">The new territory</div><div class="spec">display2 · Geist · clamp(38px,4.5vw,72px) · 600 · −0.03em</div></div>
+<div class="type-row"><div class="t-hl">Form meets subject</div><div class="spec">headline · Geist · clamp(26px,2.6vw,40px) · 600 · −0.02em</div></div>
+<div class="type-row"><div class="t-blg">Every repository here cleared fifty stars. Nothing in this dataset is obscure.</div><div class="spec">bodyLg · Geist · clamp(17px,1.3vw,21px) · 400 · LH 1.5</div></div>
+<div class="type-row"><div class="t-b">Repos in the agents-and-MCP domain went from <span class="num">275</span> in <span class="num">2022</span> to <span class="num">9,072</span> in <span class="num">2026</span>.</div><div class="spec">body · Geist 16px, with figures in Martian Mono — this mix is the house style</div></div>
+<div class="type-row"><div class="t-lbl">Category · Domain</div><div class="spec">label · Martian Mono 12px · 500 · +0.08em · uppercase</div></div>
+<div class="type-row"><div class="t-mic">262,902 repositories</div><div class="spec">micro · Martian Mono 11px · 400 · +0.04em</div></div>
+
+<div class="note">Never set prose in Martian Mono, and never set a headline figure in Geist. If it is a
+number the argument depends on, it is Martian Mono. <code>font-variant-numeric: tabular-nums</code> everywhere.</div>
+
+<h2>Layout</h2>
+<table>
+  <caption>Rail geometry</caption>
+  <tr><th>Token</th><th>Value</th><th>Use</th></tr>
+  <tr><td class="num">beat panel</td><td class="num">100dvh × 100vw</td><td>One beat; Sankey beat may exceed viewport width</td></tr>
+  <tr><td class="num">panel padding</td><td class="num">104 / 24px</td><td>Desktop / mobile, plus reserved bottom for the control bar</td></tr>
+  <tr><td class="num">content column</td><td class="num">72ch</td><td>Prose maximum; charts take remaining width</td></tr>
+  <tr><td class="num">grid</td><td class="num">12 col · 16px</td><td>Within a beat</td></tr>
+  <tr><td class="num">breakpoints</td><td class="num">480 · 768 · 1080 · 1440</td><td>Layout stays horizontal at every one</td></tr>
+</table>
+
+<h2>Elevation &amp; Depth</h2>
+<div class="row">
+  <div class="demo" style="box-shadow:var(--el-sm);margin:0">elevation.sm</div>
+  <div class="demo" style="box-shadow:var(--el-md);margin:0">elevation.md</div>
+  <div class="demo" style="box-shadow:var(--el-lg);margin:0">elevation.lg</div>
+</div>
+<div class="glow" style="margin-top:var(--sp-lg)"><strong>elevation.glow</strong> — the one expressive
+treatment. Hairline border plus a wide, low-opacity red bloom. Reserved for the active beat's primary
+chart and the hero figure.</div>
+
+<h2>Shapes</h2>
+<table>
+  <caption>Radius by element class, never one global value</caption>
+  <tr><th>Token</th><th>Value</th><th>Applies to</th></tr>
+  <tr><td class="num">none</td><td class="num">0</td><td>Chart marks, table cells, stage rail, full-bleed panels</td></tr>
+  <tr><td class="num">sm</td><td class="num">3px</td><td>Bar/ribbon data-ends, chips, tags</td></tr>
+  <tr><td class="num">md</td><td class="num">6px</td><td>Buttons, inputs, tooltips</td></tr>
+  <tr><td class="num">lg</td><td class="num">12px</td><td>Cards, control bar, sheets</td></tr>
+  <tr><td class="num">pill</td><td class="num">999px</td><td>Stage-rail indicator, toggles only</td></tr>
+</table>
+<div class="bar-demo">
+  <div class="b" style="width:78%;background:var(--seq-2)">library-sdk · 65,952</div>
+  <div class="b" style="width:37%;background:var(--seq-2)">web-app · 30,934</div>
+  <div class="b" style="width:30%;background:var(--seq-2)">docs-reference · 25,362</div>
+</div>
+<p class="spec">Square corners except a 4px rounded cap on the data-end, anchored to the baseline.</p>
+
+<h2>Motion</h2>
+<table>
+  <caption>Specified, not left to taste</caption>
+  <tr><th>Token</th><th>Value</th><th>Use</th></tr>
+  <tr><td class="num">easeOut</td><td class="num">cubic-bezier(.22,1,.36,1)</td><td>Everything entering or settling</td></tr>
+  <tr><td class="num">easeInOut</td><td class="num">cubic-bezier(.65,0,.35,1)</td><td>Only things that reverse</td></tr>
+  <tr><td class="num">instant</td><td class="num">120ms</td><td>Tooltip appearance</td></tr>
+  <tr><td class="num">fast</td><td class="num">240ms</td><td>Hover and state change</td></tr>
+  <tr><td class="num">base</td><td class="num">420ms</td><td>Element transitions</td></tr>
+  <tr><td class="num">slow</td><td class="num">720ms</td><td>Beat content settling</td></tr>
+  <tr><td class="num">beat</td><td class="num">1100ms</td><td>Chart draw-on</td></tr>
+  <tr><td class="num">scrollLerp</td><td class="num">0.085</td><td>Lenis horizontal smoothing</td></tr>
+</table>
+<p>A normal vertical wheel or trackpad gesture moves the rail sideways — the reader should never think
+about it. Animate <code>transform</code> and <code>opacity</code> only.</p>
+<div class="note"><strong>Reduced motion is a first-class path, not a fallback.</strong> Lenis smoothing off,
+native scrolling takes over, draw-on skipped, staggers collapsed, hero figure renders its final value.
+Nothing becomes unreachable and no information is lost.</div>
+
+<h2>Components</h2>
+
+<h3>stageRail — where the reader is</h3>
+<div class="demo">
+  <nav class="rail" aria-label="Story progress">
+    <button class="visited" type="button">01 THE BAR</button>
+    <button class="visited" type="button">02 WHAT PEOPLE BUILD</button>
+    <button aria-current="step" type="button">03 THE SHIFT</button>
+    <button type="button">04 FORM MEETS SUBJECT</button>
+    <button type="button">05 NEW TERRITORY</button>
+    <button type="button">06 YOU KNOW THESE</button>
+    <button type="button">07 THE WHOLE BOARD</button>
+  </nav>
+</div>
+<p class="spec">Segments are buttons — keyboard-reachable, jump to their beat, visible focus ring.</p>
+
+<h3>controlBar — persistent bottom bar</h3>
+<div class="cbar">
+  <span class="t-lbl" style="color:var(--text-muted)">04 · FORM MEETS SUBJECT</span>
+  <div class="row">
+    <button class="chipf ai" aria-pressed="true" type="button">✓ AI</button>
+    <button class="chipf not" aria-pressed="true" type="button">✓ NOT AI</button>
+    <button class="chipf" aria-pressed="false" type="button">ALL LANGUAGES</button>
+  </div>
+  <span class="num" style="font-size:12px;color:var(--text-secondary)">221,943 repos</span>
+</div>
+<p class="spec">Variants: narrative, explorer · The live record count is always visible.</p>
+
+<h3>heroFigure</h3>
+<div class="demo"><div class="t-hero">50.2<span style="color:var(--text-muted);font-size:.4em">%</span></div>
+<p class="t-bsm" style="margin:0">of repos created in 2026 are AI-related</p></div>
+
+<h3>repoCard</h3>
+<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(290px,1fr))">
+  <div class="card"><div class="slug">openclaw/openclaw</div>
+    <div class="desc">Your own personal AI assistant. Any OS. Any Platform.</div>
+    <div class="row" style="gap:var(--sp-sm)"><span class="chipf ai" aria-pressed="true">AI</span>
+    <span class="stars">383,687 stars</span></div></div>
+  <div class="card"><div class="slug">clash-verge-rev/clash-verge-rev</div>
+    <div class="desc">A modern GUI client based on Tauri.</div>
+    <div class="row" style="gap:var(--sp-sm)"><span class="chipf not" aria-pressed="true">NOT AI</span>
+    <span class="stars">132,878 stars</span></div></div>
+</div>
+
+<h3>button</h3>
+<div class="demo"><div class="row">
+  <button class="btn btn-primary" type="button">Explore all 262,902</button>
+  <button class="btn btn-ghost" type="button">Show table</button>
+  <button class="btn btn-quiet" type="button">Reset filters</button>
+  <button class="btn btn-ghost" type="button" disabled>Disabled</button>
+</div></div>
+
+<h3>statusMessage — icon and label always, never colour alone</h3>
+<div class="demo" style="padding:var(--sp-md)">
+  <div class="status info"><span class="ico">i</span><span>2026 is a partial year — it ends at the 21 July snapshot.</span></div>
+  <div class="status success"><span class="ico">✓</span><span>Index loaded. 262,902 repositories ready.</span></div>
+  <div class="status warning"><span class="ico">!</span><span>Description search loads an additional 7 MB.</span></div>
+  <div class="status danger"><span class="ico">×</span><span>Could not load the category shard. Retry.</span></div>
+</div>
+
+<h3>tooltip</h3>
+<div class="demo"><span class="tip">library-sdk → ai-agents-mcp<br>
+  <span class="num" style="color:var(--text-muted);font-size:12px">10,214 repos · 98.6% AI</span></span></div>
+
+<h3>chartFrame states</h3>
+<table>
+  <caption>Every chart frame must offer a table view — not optional</caption>
+  <tr><th>State</th><th>Behaviour</th></tr>
+  <tr><td class="num">loading</td><td>Skeleton at final height — no layout shift</td></tr>
+  <tr><td class="num">ready</td><td>Legend for ≥2 series; single series named by the title</td></tr>
+  <tr><td class="num">empty</td><td>Names the filter that caused it, offers a reset</td></tr>
+  <tr><td class="num">error</td><td>Offers retry; never a blank box</td></tr>
+</table>
+
+<h2>Do's and Don'ts</h2>
+<div class="do-dont">
+  <div class="do"><h3>Do</h3><ul>
+    <li>Bind every value to a token; re-run the <code>dataviz</code> validator after any colour change.</li>
+    <li>Let red and chartreuse mean AI and not-AI <em>everywhere</em> — chart, chip, and prose.</li>
+    <li>Set every number in Martian Mono with tabular figures; every sentence in Geist.</li>
+    <li>Use the steel ramp for plain magnitude so counts never imply an AI reading.</li>
+    <li>Reserve <code>elevation.glow</code> for the active beat's primary chart and the hero figure.</li>
+    <li>Keep the record count visible in the control bar at all times.</li>
+    <li>Ship every status message with an icon and a label.</li>
+    <li>Give every chart a table view and every beat a deep link.</li>
+  </ul></div>
+  <div class="dont"><h3>Don't</h3><ul>
+    <li>Don't add a sixth categorical hue. Fold into "Other" or change the form.</li>
+    <li>Don't put a hue at the diverging midpoint — it is grey <code>#74747A</code>.</li>
+    <li>Don't use the primary red for plain magnitude bars — that is the steel ramp's job.</li>
+    <li>Don't use red or chartreuse for UI emphasis unrelated to the AI polarity.</li>
+    <li>Don't use brand red/chartreuse directly in the diverging Sankey scale — use <code>divergingAI</code> / <code>divergingNotAI</code>.</li>
+    <li>Don't signal an error with colour alone — always pair with an icon and label.</li>
+    <li>Don't set prose in Martian Mono or headline figures in Geist.</li>
+    <li>Don't animate anything but <code>transform</code> and <code>opacity</code>.</li>
+    <li>Don't let the stage rail or control bar overlap content — reserve their height.</li>
+    <li>Don't use warm near-black, a green accent, or a light-weight geometric sans.</li>
+    <li>Don't add gradient text, glassmorphism, or a glowing grid backdrop. The one bold move is the numeric display type at scale, already spent.</li>
+    <li>Don't scale cards on hover or fake elevation with shadow on <code>ground</code>.</li>
+  </ul></div>
+</div>
+
+</div>
+</body>
+</html>

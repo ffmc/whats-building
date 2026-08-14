@@ -1,0 +1,173 @@
+/* Generated from design-system/design.md — do not hand-edit.
+   Signal is dark-only (a deliberate deviation, see design.md § How to build with this),
+   so there is no light value: these ARE the tokens, not a dark override. */
+
+:root {
+  /* surfaces */
+  --color-ground: #0A0A0F;
+  --color-ground-sunken: #06060A;
+  --color-surface: #14141B;
+  --color-surface-raised: #1D1D26;
+
+  /* ink */
+  --color-text-primary: #F2F4F7;
+  --color-text-secondary: #C0C6CF;
+  --color-text-muted: #8B94A0;
+
+  /* structure */
+  --color-border: #26262F;
+  --color-border-strong: #3A3A47;
+  --color-focus-ring: #FDB1A9;
+
+  /* the two poles */
+  --color-primary: #FA4544;
+  --color-on-primary: #0A0A0F;
+  --color-accent: #B9FA31;
+  --color-on-accent: #0A0A0F;
+
+  /* status — reserved, never a chart series */
+  --color-success: #10A8A3;
+  --color-warning: #D68A00;
+  --color-danger: #B267E4;
+  --color-info: #048FF4;
+
+  /* chart: categorical — 5 slots, fixed order, no sixth.
+     Validated for adjacent-pair use only (bars/ribbons/chips); re-validate for scatter/bubble/choropleth. */
+  --chart-cat-1: #FA4544;
+  --chart-cat-2: #2A92BB;
+  --chart-cat-3: #769F26;
+  --chart-cat-4: #B5297B;
+  --chart-cat-5: #A98C35;
+
+  /* chart: sequential — steel, for plain magnitude (never the primary hue) */
+  --chart-seq-1: #C2D3E8;
+  --chart-seq-2: #9CB3D1;
+  --chart-seq-3: #7A94B7;
+  --chart-seq-4: #5A769A;
+  --chart-seq-5: #415A79;
+
+  /* chart: diverging — AI share, the Sankey scale.
+     Decoupled from --color-primary/--color-accent: those collapse to CVD ΔE 1.4 under
+     deuteranopia, so this scale runs its own validated indigo/gold pair instead. */
+  --chart-div-ai-1: #B1C4EC;
+  --chart-div-ai-2: #6D95EE;
+  --chart-div-ai-3: #4B70C6;
+  --chart-div-ai-4: #264698;
+  --chart-div-mid: #74747A;
+  --chart-div-not-ai-1: #FCDD60;
+  --chart-div-not-ai-2: #C7A92A;
+  --chart-div-not-ai-3: #967F1C;
+  --chart-div-not-ai-4: #6B5A10;
+
+  /* chart: structural */
+  --chart-gridline: #1D1D26;
+  --chart-axis: #3A3A47;
+  --chart-deemphasis: #4A4A57;
+
+  /* type families — Geist for text, Martian Mono for every number */
+  --font-text: "Geist", system-ui, -apple-system, sans-serif;
+  --font-numeric: "Martian Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* type scale: size / line-height / weight / letter-spacing */
+  --type-hero-size: clamp(64px, 9.5vw, 168px);
+  --type-hero-line-height: 0.9;
+  --type-hero-weight: 700;
+  --type-hero-letter-spacing: -0.055em;
+  --type-hero-family: var(--font-numeric);
+
+  --type-figure-lg-size: clamp(36px, 4.5vw, 72px);
+  --type-figure-lg-line-height: 1.0;
+  --type-figure-lg-weight: 700;
+  --type-figure-lg-letter-spacing: -0.04em;
+  --type-figure-lg-family: var(--font-numeric);
+
+  --type-display-1-size: clamp(52px, 7vw, 120px);
+  --type-display-1-line-height: 0.94;
+  --type-display-1-weight: 600;
+  --type-display-1-letter-spacing: -0.035em;
+  --type-display-1-family: var(--font-text);
+
+  --type-display-2-size: clamp(38px, 4.5vw, 72px);
+  --type-display-2-line-height: 1.0;
+  --type-display-2-weight: 600;
+  --type-display-2-letter-spacing: -0.03em;
+  --type-display-2-family: var(--font-text);
+
+  --type-headline-size: clamp(26px, 2.6vw, 40px);
+  --type-headline-line-height: 1.1;
+  --type-headline-weight: 600;
+  --type-headline-letter-spacing: -0.02em;
+  --type-headline-family: var(--font-text);
+
+  --type-body-lg-size: clamp(17px, 1.3vw, 21px);
+  --type-body-lg-line-height: 1.5;
+  --type-body-lg-weight: 400;
+  --type-body-lg-letter-spacing: -0.01em;
+  --type-body-lg-family: var(--font-text);
+
+  --type-body-size: 16px;
+  --type-body-line-height: 1.6;
+  --type-body-weight: 400;
+  --type-body-letter-spacing: 0em;
+  --type-body-family: var(--font-text);
+
+  --type-body-sm-size: 14px;
+  --type-body-sm-line-height: 1.5;
+  --type-body-sm-weight: 400;
+  --type-body-sm-letter-spacing: 0em;
+  --type-body-sm-family: var(--font-text);
+
+  --type-label-size: 12px;
+  --type-label-line-height: 1.2;
+  --type-label-weight: 500;
+  --type-label-letter-spacing: 0.08em;
+  --type-label-family: var(--font-numeric);
+
+  --type-figure-size: inherit;
+  --type-figure-line-height: 1;
+  --type-figure-weight: 500;
+  --type-figure-letter-spacing: -0.01em;
+  --type-figure-family: var(--font-numeric);
+
+  --type-micro-size: 11px;
+  --type-micro-line-height: 1.2;
+  --type-micro-weight: 400;
+  --type-micro-letter-spacing: 0.04em;
+  --type-micro-family: var(--font-numeric);
+
+  /* spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+  --space-3xl: 104px;
+
+  /* radius — varies by element class, never one global value */
+  --radius-none: 0;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 12px;
+  --radius-pill: 999px;
+
+  /* elevation */
+  --elevation-sm: 0 1px 2px rgba(0, 0, 0, 0.55);
+  --elevation-md: 0 6px 20px rgba(0, 0, 0, 0.6);
+  --elevation-lg: 0 18px 56px rgba(0, 0, 0, 0.7);
+  --elevation-glow: 0 0 0 1px #26262F, 0 8px 40px rgba(250, 69, 68, 0.22);
+
+  /* motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --duration-instant: 120ms;
+  --duration-fast: 240ms;
+  --duration-base: 420ms;
+  --duration-slow: 720ms;
+  --duration-beat: 1100ms;
+  --scroll-lerp: 0.085;
+}
+
+/* Reduced motion is handled in component/scroll logic (Lenis disabled, draw-on
+   skipped, staggers collapsed) per design.md § Motion — not by zeroing these
+   duration tokens, which build mode still needs for non-motion-sensitive uses. */

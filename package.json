@@ -1,0 +1,14 @@
+{
+  "name": "whats-building",
+  "private": true,
+  "workspaces": [
+    "site"
+  ],
+  "dependencies": {
+    "d3-array": "^3.2.4",
+    "d3-scale": "^4.0.2",
+    "d3-shape": "^3.2.0",
+    "react": "^18.3.1"
+  },
+  "allowScripts": {}
+}
