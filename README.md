@@ -1,4 +1,14 @@
-# whats-building
+# What's Building
+
+A data pipeline and interactive page that classify **262,902 GitHub repositories** with Claude and track how their stars change over time. The headline result: the AI-related share of new, popular repos grew from 14.1% (2021) to 28.6% (2023) and 50.2% (2026, partial year).
+
+[Project page](https://franciscocardoso.eu/whats-building.html) · Python, SQLite, GitHub GraphQL, Anthropic Batch API, React, TypeScript, D3
+
+![What's Building screenshot](docs/screenshot.webp)
+
+The rest of this document is the design doc: architecture, data model, cost and current status.
+
+---
 
 A web page that visualizes what people are building on GitHub — what categories
 and domains new repos fall into, and how their stars/watchers evolve over time,

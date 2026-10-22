@@ -6,3 +6,6 @@ whats_building.db-*
 *.log
 __pycache__/
 site/data/
+
+node_modules/
+.claude/settings.local.json
