@@ -9,3 +9,6 @@ site/data/
 
 node_modules/
 .claude/settings.local.json
+
+# Claude Code instructions
+CLAUDE.md
